@@ -1,6 +1,16 @@
 {
   "posters": [
     {
+      "id": "ireland_and_great_britain_grid_paper_grid_20260522_182144",
+      "region": "ireland_and_great_britain",
+      "theme": "paper_grid",
+      "region_display": "Ireland And Great Britain",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260522_182144",
+      "png": "ireland_and_great_britain_grid_paper_grid_20260522_182144.png",
+      "svg": null
+    },
+    {
       "id": "scandinavia_grid_prismatic_current_20260522_002558",
       "region": "scandinavia",
       "theme": "prismatic_current",
@@ -8,16 +18,6 @@
       "theme_display": "Prismatic Current",
       "timestamp": "20260522_002558",
       "png": "scandinavia_grid_prismatic_current_20260522_002558.png",
-      "svg": null
-    },
-    {
-      "id": "great_britain_and_ireland_grid_paper_grid_20260521_111155",
-      "region": "great_britain_and_ireland",
-      "theme": "paper_grid",
-      "region_display": "Great Britain And Ireland",
-      "theme_display": "Paper Grid",
-      "timestamp": "20260521_111155",
-      "png": "great_britain_and_ireland_grid_paper_grid_20260521_111155.png",
       "svg": null
     },
     {
@@ -368,16 +368,6 @@
       "theme_display": "Autumn",
       "timestamp": "20260518_125319",
       "png": "morocco_grid_autumn_20260518_125319.png",
-      "svg": null
-    },
-    {
-      "id": "marocco_grid_autumn_20260518_124812",
-      "region": "marocco",
-      "theme": "autumn",
-      "region_display": "Marocco",
-      "theme_display": "Autumn",
-      "timestamp": "20260518_124812",
-      "png": "marocco_grid_autumn_20260518_124812.png",
       "svg": null
     },
     {
@@ -831,16 +821,6 @@
       "svg": null
     },
     {
-      "id": "west_african_power_pool_grid_japanese_ink_20260514_120934",
-      "region": "west_african_power_pool",
-      "theme": "japanese_ink",
-      "region_display": "West African Power Pool",
-      "theme_display": "Japanese Ink",
-      "timestamp": "20260514_120934",
-      "png": "west_african_power_pool_grid_japanese_ink_20260514_120934.png",
-      "svg": null
-    },
-    {
       "id": "zambia_grid_sunset_20260514_115613",
       "region": "zambia",
       "theme": "sunset",
@@ -888,16 +868,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260512_173256",
       "png": "china_grid_paper_grid_20260512_173256.png",
-      "svg": null
-    },
-    {
-      "id": "marocco_grid_autumn_20260512_165630",
-      "region": "marocco",
-      "theme": "autumn",
-      "region_display": "Marocco",
-      "theme_display": "Autumn",
-      "timestamp": "20260512_165630",
-      "png": "marocco_grid_autumn_20260512_165630.png",
       "svg": null
     },
     {
