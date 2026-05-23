@@ -1,6 +1,16 @@
 {
   "posters": [
     {
+      "id": "portugal_grid_noctilux_glow_20260523_003605",
+      "region": "portugal",
+      "theme": "noctilux_glow",
+      "region_display": "Portugal",
+      "theme_display": "Noctilux Glow",
+      "timestamp": "20260523_003605",
+      "png": "portugal_grid_noctilux_glow_20260523_003605.png",
+      "svg": null
+    },
+    {
       "id": "ireland_and_great_britain_grid_paper_grid_20260522_182144",
       "region": "ireland_and_great_britain",
       "theme": "paper_grid",
@@ -98,16 +108,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260519_225346",
       "png": "new_zealand_grid_paper_grid_20260519_225346.png",
-      "svg": null
-    },
-    {
-      "id": "japan_grid_paper_grid_20260519_224740",
-      "region": "japan",
-      "theme": "paper_grid",
-      "region_display": "Japan",
-      "theme_display": "Paper Grid",
-      "timestamp": "20260519_224740",
-      "png": "japan_grid_paper_grid_20260519_224740.png",
       "svg": null
     },
     {
@@ -281,16 +281,6 @@
       "svg": null
     },
     {
-      "id": "japan_grid_aurora_grid_20260518_224946",
-      "region": "japan",
-      "theme": "aurora_grid",
-      "region_display": "Japan",
-      "theme_display": "Aurora Grid",
-      "timestamp": "20260518_224946",
-      "png": "japan_grid_aurora_grid_20260518_224946.png",
-      "svg": null
-    },
-    {
       "id": "egypt_grid_paper_grid_20260518_224907",
       "region": "egypt",
       "theme": "paper_grid",
@@ -391,16 +381,6 @@
       "svg": null
     },
     {
-      "id": "middle_east_and_north_africa_grid_neon_cyberpunk_20260518_005912",
-      "region": "middle_east_and_north_africa",
-      "theme": "neon_cyberpunk",
-      "region_display": "Middle East And North Africa",
-      "theme_display": "Neon Cyberpunk",
-      "timestamp": "20260518_005912",
-      "png": "middle_east_and_north_africa_grid_neon_cyberpunk_20260518_005912.png",
-      "svg": null
-    },
-    {
       "id": "middle_east_and_north_africa_grid_neon_cyberpunk_20260518_001957",
       "region": "middle_east_and_north_africa",
       "theme": "neon_cyberpunk",
@@ -428,16 +408,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260517_203954",
       "png": "portugal_grid_paper_grid_20260517_203954.png",
-      "svg": null
-    },
-    {
-      "id": "ibera_grid_aurora_grid_20260517_083938",
-      "region": "ibera",
-      "theme": "aurora_grid",
-      "region_display": "Ibera",
-      "theme_display": "Aurora Grid",
-      "timestamp": "20260517_083938",
-      "png": "ibera_grid_aurora_grid_20260517_083938.png",
       "svg": null
     },
     {
@@ -601,16 +571,6 @@
       "svg": null
     },
     {
-      "id": "latin_america_grid_paper_grid_20260516_210530",
-      "region": "latin_america",
-      "theme": "paper_grid",
-      "region_display": "Latin America",
-      "theme_display": "Paper Grid",
-      "timestamp": "20260516_210530",
-      "png": "latin_america_grid_paper_grid_20260516_210530.png",
-      "svg": null
-    },
-    {
       "id": "north_america_grid_neon_cyberpunk_20260516_202819",
       "region": "north_america",
       "theme": "neon_cyberpunk",
@@ -668,16 +628,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260516_181856",
       "png": "united_kingdom_grid_paper_grid_20260516_181856.png",
-      "svg": null
-    },
-    {
-      "id": "japan_grid_paper_grid_20260516_174513",
-      "region": "japan",
-      "theme": "paper_grid",
-      "region_display": "Japan",
-      "theme_display": "Paper Grid",
-      "timestamp": "20260516_174513",
-      "png": "japan_grid_paper_grid_20260516_174513.png",
       "svg": null
     },
     {
