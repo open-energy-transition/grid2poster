@@ -1,6 +1,36 @@
 {
   "posters": [
     {
+      "id": "quebec_grid_noctilux_glow_20260523_184910",
+      "region": "quebec",
+      "theme": "noctilux_glow",
+      "region_display": "Quebec",
+      "theme_display": "Noctilux Glow",
+      "timestamp": "20260523_184910",
+      "png": "quebec_grid_noctilux_glow_20260523_184910.png",
+      "svg": null
+    },
+    {
+      "id": "south_africa_grid_electric_midnight_20260523_105731",
+      "region": "south_africa",
+      "theme": "electric_midnight",
+      "region_display": "South Africa",
+      "theme_display": "Electric Midnight",
+      "timestamp": "20260523_105731",
+      "png": "south_africa_grid_electric_midnight_20260523_105731.png",
+      "svg": null
+    },
+    {
+      "id": "east_africa_grid_noctilux_glow_20260523_095527",
+      "region": "east_africa",
+      "theme": "noctilux_glow",
+      "region_display": "East Africa",
+      "theme_display": "Noctilux Glow",
+      "timestamp": "20260523_095527",
+      "png": "east_africa_grid_noctilux_glow_20260523_095527.png",
+      "svg": null
+    },
+    {
       "id": "portugal_grid_noctilux_glow_20260523_003605",
       "region": "portugal",
       "theme": "noctilux_glow",
@@ -48,16 +78,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260522_182144",
       "png": "ireland_and_great_britain_grid_paper_grid_20260522_182144.png",
-      "svg": null
-    },
-    {
-      "id": "scandinavia_grid_prismatic_current_20260522_002558",
-      "region": "scandinavia",
-      "theme": "prismatic_current",
-      "region_display": "Scandinavia",
-      "theme_display": "Prismatic Current",
-      "timestamp": "20260522_002558",
-      "png": "scandinavia_grid_prismatic_current_20260522_002558.png",
       "svg": null
     },
     {
