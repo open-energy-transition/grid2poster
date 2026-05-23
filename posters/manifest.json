@@ -11,6 +11,36 @@
       "svg": null
     },
     {
+      "id": "japan_grid_noctilux_glow_20260523_001232",
+      "region": "japan",
+      "theme": "noctilux_glow",
+      "region_display": "Japan",
+      "theme_display": "Noctilux Glow",
+      "timestamp": "20260523_001232",
+      "png": "japan_grid_noctilux_glow_20260523_001232.png",
+      "svg": null
+    },
+    {
+      "id": "japan_grid_japanese_ink_20260522_233726",
+      "region": "japan",
+      "theme": "japanese_ink",
+      "region_display": "Japan",
+      "theme_display": "Japanese Ink",
+      "timestamp": "20260522_233726",
+      "png": "japan_grid_japanese_ink_20260522_233726.png",
+      "svg": null
+    },
+    {
+      "id": "scandinavia_grid_prismatic_current_20260522_221111",
+      "region": "scandinavia",
+      "theme": "prismatic_current",
+      "region_display": "Scandinavia",
+      "theme_display": "Prismatic Current",
+      "timestamp": "20260522_221111",
+      "png": "scandinavia_grid_prismatic_current_20260522_221111.png",
+      "svg": null
+    },
+    {
       "id": "ireland_and_great_britain_grid_paper_grid_20260522_182144",
       "region": "ireland_and_great_britain",
       "theme": "paper_grid",
