@@ -1,6 +1,16 @@
 {
   "posters": [
     {
+      "id": "the_salish_sea_grid_paper_grid_20260523_190212",
+      "region": "the_salish_sea",
+      "theme": "paper_grid",
+      "region_display": "The Salish Sea",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260523_190212",
+      "png": "the_salish_sea_grid_paper_grid_20260523_190212.png",
+      "svg": null
+    },
+    {
       "id": "quebec_grid_noctilux_glow_20260523_184910",
       "region": "quebec",
       "theme": "noctilux_glow",
