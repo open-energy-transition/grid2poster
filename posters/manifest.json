@@ -851,16 +851,6 @@
       "svg": null
     },
     {
-      "id": "nigeria_grid_paper_grid_20260512_221933",
-      "region": "nigeria",
-      "theme": "paper_grid",
-      "region_display": "Nigeria",
-      "theme_display": "Paper Grid",
-      "timestamp": "20260512_221933",
-      "png": null,
-      "svg": "nigeria_grid_paper_grid_20260512_221933.svg"
-    },
-    {
       "id": "nigeria_grid_paper_grid_20260512_210551",
       "region": "nigeria",
       "theme": "paper_grid",
