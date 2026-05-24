@@ -1,6 +1,72 @@
 {
   "posters": [
     {
+      "id": "switzerland_grid_signal_nights_20260524_175445",
+      "region": "switzerland",
+      "theme": "signal_nights",
+      "voltage_interpolation": false,
+      "region_display": "Switzerland",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260524_175445",
+      "png": "switzerland_grid_signal_nights_20260524_175445.png",
+      "svg": null
+    },
+    {
+      "id": "philippines_grid_daylight_spectrum_20260524_174619",
+      "region": "philippines",
+      "theme": "daylight_spectrum",
+      "voltage_interpolation": false,
+      "region_display": "Philippines",
+      "theme_display": "Daylight Spectrum",
+      "timestamp": "20260524_174619",
+      "png": "philippines_grid_daylight_spectrum_20260524_174619.png",
+      "svg": null
+    },
+    {
+      "id": "austria_grid_prismatic_current_20260524_173850",
+      "region": "austria",
+      "theme": "prismatic_current",
+      "voltage_interpolation": false,
+      "region_display": "Austria",
+      "theme_display": "Prismatic Current",
+      "timestamp": "20260524_173850",
+      "png": "austria_grid_prismatic_current_20260524_173850.png",
+      "svg": null
+    },
+    {
+      "id": "ireland_and_great_britain_grid_femme_bloom_vinterp_20260524_132231",
+      "region": "ireland_and_great_britain",
+      "theme": "femme_bloom",
+      "voltage_interpolation": true,
+      "region_display": "Ireland And Great Britain",
+      "theme_display": "Femme Bloom",
+      "timestamp": "20260524_132231",
+      "png": "ireland_and_great_britain_grid_femme_bloom_vinterp_20260524_132231.png",
+      "svg": null
+    },
+    {
+      "id": "california_grid_electric_midnight_20260524_104427",
+      "region": "california",
+      "theme": "electric_midnight",
+      "voltage_interpolation": false,
+      "region_display": "California",
+      "theme_display": "Electric Midnight",
+      "timestamp": "20260524_104427",
+      "png": "california_grid_electric_midnight_20260524_104427.png",
+      "svg": null
+    },
+    {
+      "id": "the_salish_sea_grid_femme_bloom_20260524_090234",
+      "region": "the_salish_sea",
+      "theme": "femme_bloom",
+      "voltage_interpolation": false,
+      "region_display": "The Salish Sea",
+      "theme_display": "Femme Bloom",
+      "timestamp": "20260524_090234",
+      "png": "the_salish_sea_grid_femme_bloom_20260524_090234.png",
+      "svg": null
+    },
+    {
       "id": "quebec_grid_femme_bloom_20260524_085124",
       "region": "quebec",
       "theme": "femme_bloom",

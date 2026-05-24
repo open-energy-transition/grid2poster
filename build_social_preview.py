@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "posters" / "great_britain_and_ireland_grid_paper_grid_20260521_111155.png"
+SRC = ROOT / "posters" / "ireland_and_great_britain_grid_paper_grid_20260522_182144.png"
 OUT = ROOT / "assets" / "social-preview.png"
 
 W, H = 1200, 630
