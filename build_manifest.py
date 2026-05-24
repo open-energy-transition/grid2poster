@@ -22,6 +22,7 @@ TIMESTAMP_RE = re.compile(r"_(\d{8})_(\d{6})$")
 
 # Tokens that should not be plain Title Case in display strings.
 ACRONYMS = {"hdr": "HDR", "uk": "UK", "us": "US", "usa": "USA"}
+VINTERP_SUFFIX = "_vinterp"
 
 
 def parse_stem(stem: str) -> tuple[str, str, str] | None:
@@ -57,15 +58,18 @@ def build() -> list[dict]:
             print(f"skipping unrecognised filename: {path.name}")
             continue
         region, theme, timestamp = parsed
+        vinterp = theme.endswith(VINTERP_SUFFIX)
+        theme_base = theme[: -len(VINTERP_SUFFIX)] if vinterp else theme
         key = (region, theme, timestamp)
         entry = by_key.setdefault(
             key,
             {
                 "id": f"{region}_grid_{theme}_{timestamp}",
                 "region": region,
-                "theme": theme,
+                "theme": theme_base,
+                "voltage_interpolation": vinterp,
                 "region_display": pretty(region),
-                "theme_display": pretty(theme),
+                "theme_display": pretty(theme_base),
                 "timestamp": timestamp,
                 "png": None,
                 "svg": None,

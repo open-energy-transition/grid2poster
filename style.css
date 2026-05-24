@@ -193,6 +193,15 @@ a:hover { color: var(--accent); }
   letter-spacing: 0.06em;
   margin: 0;
 }
+.vinterp-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 6px;
+  vertical-align: middle;
+}
 
 /* Footer */
 .site-footer {
@@ -226,6 +235,10 @@ a:hover { color: var(--accent); }
   font-family: var(--font-serif);
   font-size: 17px;
   min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .lightbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {

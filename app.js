@@ -163,6 +163,12 @@ function card(p) {
   const sub = document.createElement("p");
   sub.className = "card-sub";
   sub.textContent = p.theme_display;
+  if (p.voltage_interpolation) {
+    const dot = document.createElement("span");
+    dot.className = "vinterp-dot";
+    dot.title = "Voltage colors";
+    sub.appendChild(dot);
+  }
   body.appendChild(title);
   body.appendChild(sub);
 
@@ -213,7 +219,15 @@ function openLightbox(p) {
   state.current = p;
   els.lightboxImg.src = `posters/${p.png || p.svg}`;
   els.lightboxImg.alt = `${p.region_display} - ${p.theme_display}`;
-  els.lightboxTitle.textContent = `${p.region_display} - ${p.theme_display}`;
+  els.lightboxTitle.innerHTML = "";
+  const titleText = `${p.region_display} — ${p.theme_display}`;
+  els.lightboxTitle.appendChild(document.createTextNode(titleText));
+  if (p.voltage_interpolation) {
+    const dot = document.createElement("span");
+    dot.className = "vinterp-dot";
+    dot.title = "Voltage colors";
+    els.lightboxTitle.appendChild(dot);
+  }
   els.lightboxDownload.href = `posters/${p.png || p.svg}`;
   els.lightboxDownload.setAttribute("download", p.png || p.svg);
   els.lightboxSvg.hidden = !p.svg;
