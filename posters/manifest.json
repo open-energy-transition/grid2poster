@@ -12,17 +12,6 @@
       "svg": null
     },
     {
-      "id": "philippines_grid_daylight_spectrum_20260524_174619",
-      "region": "philippines",
-      "theme": "daylight_spectrum",
-      "voltage_interpolation": false,
-      "region_display": "Philippines",
-      "theme_display": "Daylight Spectrum",
-      "timestamp": "20260524_174619",
-      "png": "philippines_grid_daylight_spectrum_20260524_174619.png",
-      "svg": null
-    },
-    {
       "id": "austria_grid_prismatic_current_20260524_173850",
       "region": "austria",
       "theme": "prismatic_current",
