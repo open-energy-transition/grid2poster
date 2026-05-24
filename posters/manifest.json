@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "quebec_grid_femme_bloom_20260524_085124",
+      "region": "quebec",
+      "theme": "femme_bloom",
+      "voltage_interpolation": false,
+      "region_display": "Quebec",
+      "theme_display": "Femme Bloom",
+      "timestamp": "20260524_085124",
+      "png": "quebec_grid_femme_bloom_20260524_085124.png",
+      "svg": null
+    },
+    {
       "id": "scandinavia_grid_daylight_spectrum_20260524_081709",
       "region": "scandinavia",
       "theme": "daylight_spectrum",
@@ -482,17 +493,6 @@
       "theme_display": "Aurora Grid",
       "timestamp": "20260518_191700",
       "png": "myanmar_grid_aurora_grid_20260518_191700.png",
-      "svg": null
-    },
-    {
-      "id": "malaysia_grid_copper_patina_20260518_185402",
-      "region": "malaysia",
-      "theme": "copper_patina",
-      "voltage_interpolation": false,
-      "region_display": "Malaysia",
-      "theme_display": "Copper Patina",
-      "timestamp": "20260518_185402",
-      "png": "malaysia_grid_copper_patina_20260518_185402.png",
       "svg": null
     },
     {
