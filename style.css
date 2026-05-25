@@ -195,10 +195,10 @@ a:hover { color: var(--accent); }
 }
 .vinterp-dot {
   display: inline-block;
-  width: 7px;
+  width: 28px;
   height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
+  border-radius: 4px;
+  background: linear-gradient(90deg, #0d47a1, #00bcd4, #4caf50, #ffeb3b, #ff5722);
   margin-left: 6px;
   vertical-align: middle;
 }
