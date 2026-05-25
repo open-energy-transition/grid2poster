@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "zambia_grid_signal_nights_20260525_231154",
+      "region": "zambia",
+      "theme": "signal_nights",
+      "voltage_interpolation": false,
+      "region_display": "Zambia",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260525_231154",
+      "png": "zambia_grid_signal_nights_20260525_231154.png",
+      "svg": null
+    },
+    {
       "id": "south_east_asia_grid_aurora_grid_20260525_224601",
       "region": "south_east_asia",
       "theme": "aurora_grid",
