@@ -1,6 +1,39 @@
 {
   "posters": [
     {
+      "id": "china_grid_prismatic_current_20260525_122257",
+      "region": "china",
+      "theme": "prismatic_current",
+      "voltage_interpolation": false,
+      "region_display": "China",
+      "theme_display": "Prismatic Current",
+      "timestamp": "20260525_122257",
+      "png": "china_grid_prismatic_current_20260525_122257.png",
+      "svg": null
+    },
+    {
+      "id": "germany_grid_neon_cyberpunk_20260525_084409",
+      "region": "germany",
+      "theme": "neon_cyberpunk",
+      "voltage_interpolation": false,
+      "region_display": "Germany",
+      "theme_display": "Neon Cyberpunk",
+      "timestamp": "20260525_084409",
+      "png": "germany_grid_neon_cyberpunk_20260525_084409.png",
+      "svg": null
+    },
+    {
+      "id": "south_asia_grid_paper_grid_20260525_072252",
+      "region": "south_asia",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "South Asia",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260525_072252",
+      "png": "south_asia_grid_paper_grid_20260525_072252.png",
+      "svg": null
+    },
+    {
       "id": "switzerland_grid_signal_nights_20260524_175445",
       "region": "switzerland",
       "theme": "signal_nights",
