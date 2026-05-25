@@ -1,6 +1,50 @@
 {
   "posters": [
     {
+      "id": "south_east_asia_grid_paper_grid_20260525_223121",
+      "region": "south_east_asia",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "South East Asia",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260525_223121",
+      "png": "south_east_asia_grid_paper_grid_20260525_223121.png",
+      "svg": null
+    },
+    {
+      "id": "brazil_grid_paper_grid_20260525_222427",
+      "region": "brazil",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "Brazil",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260525_222427",
+      "png": "brazil_grid_paper_grid_20260525_222427.png",
+      "svg": null
+    },
+    {
+      "id": "china_grid_aurora_grid_vinterp_20260525_214521",
+      "region": "china",
+      "theme": "aurora_grid",
+      "voltage_interpolation": true,
+      "region_display": "China",
+      "theme_display": "Aurora Grid",
+      "timestamp": "20260525_214521",
+      "png": "china_grid_aurora_grid_vinterp_20260525_214521.png",
+      "svg": null
+    },
+    {
+      "id": "china_grid_electric_midnight_vinterp_20260525_212910",
+      "region": "china",
+      "theme": "electric_midnight",
+      "voltage_interpolation": true,
+      "region_display": "China",
+      "theme_display": "Electric Midnight",
+      "timestamp": "20260525_212910",
+      "png": "china_grid_electric_midnight_vinterp_20260525_212910.png",
+      "svg": null
+    },
+    {
       "id": "brazil_grid_paper_grid_20260525_203648",
       "region": "brazil",
       "theme": "paper_grid",
