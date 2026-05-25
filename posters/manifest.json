@@ -1,6 +1,28 @@
 {
   "posters": [
     {
+      "id": "brazil_grid_paper_grid_20260525_203648",
+      "region": "brazil",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "Brazil",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260525_203648",
+      "png": "brazil_grid_paper_grid_20260525_203648.png",
+      "svg": null
+    },
+    {
+      "id": "china_grid_electric_midnight_20260525_200636",
+      "region": "china",
+      "theme": "electric_midnight",
+      "voltage_interpolation": false,
+      "region_display": "China",
+      "theme_display": "Electric Midnight",
+      "timestamp": "20260525_200636",
+      "png": "china_grid_electric_midnight_20260525_200636.png",
+      "svg": null
+    },
+    {
       "id": "china_grid_prismatic_current_20260525_122257",
       "region": "china",
       "theme": "prismatic_current",
@@ -262,6 +284,17 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260522_182144",
       "png": "ireland_and_great_britain_grid_paper_grid_20260522_182144.png",
+      "svg": null
+    },
+    {
+      "id": "global_grid_aurora_grid_20260521_105307",
+      "region": "global",
+      "theme": "aurora_grid",
+      "voltage_interpolation": false,
+      "region_display": "Global",
+      "theme_display": "Aurora Grid",
+      "timestamp": "20260521_105307",
+      "png": "global_grid_aurora_grid_20260521_105307.png",
       "svg": null
     },
     {
