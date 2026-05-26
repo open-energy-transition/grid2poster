@@ -48,14 +48,15 @@ a:hover { color: var(--accent); }
 
 /* Top banner */
 .top-banner {
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 13px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
   text-align: center;
-  padding: 8px 0;
+  padding: 10px 0;
 }
-.top-banner a { color: var(--bg); text-decoration: underline; }
-.top-banner a:hover { color: var(--accent); }
+.top-banner a { color: #ffffff; text-decoration: underline; }
+.top-banner a:hover { color: #ffffffcc; }
 
 /* Header */
 .site-header {
