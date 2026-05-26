@@ -1,6 +1,39 @@
 {
   "posters": [
     {
+      "id": "united_states_grid_paper_grid_20260526_095649",
+      "region": "united_states",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "United States",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260526_095649",
+      "png": "united_states_grid_paper_grid_20260526_095649.png",
+      "svg": null
+    },
+    {
+      "id": "united_states_grid_signal_nights_20260526_092431",
+      "region": "united_states",
+      "theme": "signal_nights",
+      "voltage_interpolation": false,
+      "region_display": "United States",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260526_092431",
+      "png": "united_states_grid_signal_nights_20260526_092431.png",
+      "svg": null
+    },
+    {
+      "id": "china_grid_signal_nights_vinterp_20260525_232947",
+      "region": "china",
+      "theme": "signal_nights",
+      "voltage_interpolation": true,
+      "region_display": "China",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260525_232947",
+      "png": "china_grid_signal_nights_vinterp_20260525_232947.png",
+      "svg": null
+    },
+    {
       "id": "zambia_grid_signal_nights_20260525_231154",
       "region": "zambia",
       "theme": "signal_nights",
