@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "java_and_bali_grid_aurora_grid_20260526_131006",
+      "region": "java_and_bali",
+      "theme": "aurora_grid",
+      "voltage_interpolation": false,
+      "region_display": "Java And Bali",
+      "theme_display": "Aurora Grid",
+      "timestamp": "20260526_131006",
+      "png": "java_and_bali_grid_aurora_grid_20260526_131006.png",
+      "svg": null
+    },
+    {
       "id": "united_states_grid_paper_grid_20260526_095649",
       "region": "united_states",
       "theme": "paper_grid",
