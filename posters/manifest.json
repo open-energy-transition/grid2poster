@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "pakistan_grid_arc_flash_20260526_165900",
+      "region": "pakistan",
+      "theme": "arc_flash",
+      "voltage_interpolation": false,
+      "region_display": "Pakistan",
+      "theme_display": "Arc Flash",
+      "timestamp": "20260526_165900",
+      "png": "pakistan_grid_arc_flash_20260526_165900.png",
+      "svg": null
+    },
+    {
       "id": "java_and_bali_grid_aurora_grid_20260526_131006",
       "region": "java_and_bali",
       "theme": "aurora_grid",
