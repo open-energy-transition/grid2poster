@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "western_interconnection_grid_signal_nights_20260527_165439",
+      "region": "western_interconnection",
+      "theme": "signal_nights",
+      "voltage_interpolation": false,
+      "region_display": "Western Interconnection",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260527_165439",
+      "png": "western_interconnection_grid_signal_nights_20260527_165439.png",
+      "svg": null
+    },
+    {
       "id": "china_grid_signal_nights_vinterp_20260526_203610",
       "region": "china",
       "theme": "signal_nights",
