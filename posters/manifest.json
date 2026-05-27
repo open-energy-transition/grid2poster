@@ -1,6 +1,28 @@
 {
   "posters": [
     {
+      "id": "china_grid_signal_nights_vinterp_20260526_203610",
+      "region": "china",
+      "theme": "signal_nights",
+      "voltage_interpolation": true,
+      "region_display": "China",
+      "theme_display": "Signal Nights",
+      "timestamp": "20260526_203610",
+      "png": "china_grid_signal_nights_vinterp_20260526_203610.png",
+      "svg": null
+    },
+    {
+      "id": "south_asia_grid_paper_grid_20260526_172122",
+      "region": "south_asia",
+      "theme": "paper_grid",
+      "voltage_interpolation": false,
+      "region_display": "South Asia",
+      "theme_display": "Paper Grid",
+      "timestamp": "20260526_172122",
+      "png": "south_asia_grid_paper_grid_20260526_172122.png",
+      "svg": null
+    },
+    {
       "id": "pakistan_grid_arc_flash_20260526_165900",
       "region": "pakistan",
       "theme": "arc_flash",
