@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "africa_grid_kaleido_pulse_20260528_231909",
+      "region": "africa",
+      "theme": "kaleido_pulse",
+      "voltage_interpolation": false,
+      "region_display": "Africa",
+      "theme_display": "Kaleido Pulse",
+      "timestamp": "20260528_231909",
+      "png": "africa_grid_kaleido_pulse_20260528_231909.png",
+      "svg": null
+    },
+    {
       "id": "western_interconnection_grid_signal_nights_20260527_165439",
       "region": "western_interconnection",
       "theme": "signal_nights",
