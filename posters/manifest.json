@@ -1,6 +1,28 @@
 {
   "posters": [
     {
+      "id": "netherlands_grid_monochrome_more_cables_20260529_173723",
+      "region": "netherlands",
+      "theme": "monochrome_more_cables",
+      "voltage_interpolation": false,
+      "region_display": "Netherlands",
+      "theme_display": "Monochrome More Cables",
+      "timestamp": "20260529_173723",
+      "png": "netherlands_grid_monochrome_more_cables_20260529_173723.png",
+      "svg": null
+    },
+    {
+      "id": "netherlands_grid_neon_dutchpunk_20260529_173322",
+      "region": "netherlands",
+      "theme": "neon_dutchpunk",
+      "voltage_interpolation": false,
+      "region_display": "Netherlands",
+      "theme_display": "Neon Dutchpunk",
+      "timestamp": "20260529_173322",
+      "png": "netherlands_grid_neon_dutchpunk_20260529_173322.png",
+      "svg": null
+    },
+    {
       "id": "alberta_grid_aurora_grid_20260528_234214",
       "region": "alberta",
       "theme": "aurora_grid",
