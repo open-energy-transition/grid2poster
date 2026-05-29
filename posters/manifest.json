@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "scandinavia_grid_kaleido_pulse_20260529_203106",
+      "region": "scandinavia",
+      "theme": "kaleido_pulse",
+      "voltage_interpolation": false,
+      "region_display": "Scandinavia",
+      "theme_display": "Kaleido Pulse",
+      "timestamp": "20260529_203106",
+      "png": "scandinavia_grid_kaleido_pulse_20260529_203106.png",
+      "svg": null
+    },
+    {
       "id": "continental_europe_grid_paper_grid_20260529_192629",
       "region": "continental_europe",
       "theme": "paper_grid",
