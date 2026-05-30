@@ -8,7 +8,7 @@
 //     -> Download button -> direct file
 //     -> SVG button -> direct file (only when an SVG exists)
 //     -> Share button -> Web Share API, falls back to clipboard
-//     -> URL hash (#<poster-id>) makes posters deep-linkable
+//     -> URL query (?p=<poster-id>) makes posters deep-linkable
 
 const state = {
   posters: [],
@@ -71,8 +71,33 @@ async function init() {
   renderFilters();
   renderGallery();
   bindLightbox();
-  handleHash();
-  window.addEventListener("hashchange", handleHash);
+  migrateLegacyHash();
+  handleRoute();
+  window.addEventListener("popstate", handleRoute);
+}
+
+// --------- Deep-link routing (?p=<id>) ---------
+
+const POSTER_PARAM = "p";
+
+function currentPosterId() {
+  return new URLSearchParams(location.search).get(POSTER_PARAM) || "";
+}
+
+// Back-compat: old links used a #<poster-id> hash. Rewrite them in place to
+// the clean ?p=<id> form so previously shared URLs keep working.
+function migrateLegacyHash() {
+  const id = location.hash.replace(/^#/, "");
+  if (!id) return;
+  history.replaceState(null, "", posterUrl(id).toString());
+}
+
+function posterUrl(id) {
+  const u = new URL(window.location.href);
+  u.hash = "";
+  if (id) u.searchParams.set(POSTER_PARAM, id);
+  else u.searchParams.delete(POSTER_PARAM);
+  return u;
 }
 
 // --------- Filters ---------
@@ -226,7 +251,9 @@ function openLightbox(p) {
   els.lightbox.hidden = false;
   els.lightbox.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
-  if (location.hash !== `#${p.id}`) history.replaceState(null, "", `#${p.id}`);
+  if (currentPosterId() !== p.id) {
+    history.replaceState(null, "", posterUrl(p.id).toString());
+  }
 }
 
 function closeLightbox() {
@@ -234,7 +261,9 @@ function closeLightbox() {
   els.lightbox.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
   state.current = null;
-  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  if (currentPosterId()) {
+    history.replaceState(null, "", posterUrl("").toString());
+  }
 }
 
 function stepLightbox(delta) {
@@ -246,8 +275,8 @@ function stepLightbox(delta) {
   if (next) openLightbox(next);
 }
 
-function handleHash() {
-  const id = location.hash.replace(/^#/, "");
+function handleRoute() {
+  const id = currentPosterId();
   if (!id) {
     if (!els.lightbox.hidden) closeLightbox();
     return;
@@ -346,7 +375,7 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 async function shareCurrent() {
   if (!state.current) return;
-  const url = absoluteUrl(`#${state.current.id}`);
+  const url = posterUrl(state.current.id).toString();
   const title = `${state.current.region_display} - ${state.current.theme_display}`;
   const text = `${title} · grid2poster`;
   if (navigator.share) {
@@ -372,12 +401,6 @@ function triggerDownload(href, name) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-}
-
-function absoluteUrl(hash) {
-  const u = new URL(window.location.href);
-  u.hash = hash.startsWith("#") ? hash.slice(1) : hash;
-  return u.toString();
 }
 
 let toastTimer = null;
