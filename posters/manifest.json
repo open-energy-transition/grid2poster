@@ -67,17 +67,6 @@
       "svg": null
     },
     {
-      "id": "continental_europe_grid_signal_nights_20260528_233112",
-      "region": "continental_europe",
-      "theme": "signal_nights",
-      "voltage_interpolation": false,
-      "region_display": "Continental Europe",
-      "theme_display": "Signal Nights",
-      "timestamp": "20260528_233112",
-      "png": "continental_europe_grid_signal_nights_20260528_233112.png",
-      "svg": null
-    },
-    {
       "id": "africa_grid_kaleido_pulse_20260528_231909",
       "region": "africa",
       "theme": "kaleido_pulse",
