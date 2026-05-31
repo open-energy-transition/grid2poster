@@ -23,6 +23,17 @@
       "svg": null
     },
     {
+      "id": "great_lakes_grid_neon_cyberpunk_20260530_222322",
+      "region": "great_lakes",
+      "theme": "neon_cyberpunk",
+      "voltage_interpolation": false,
+      "region_display": "Great Lakes",
+      "theme_display": "Neon Cyberpunk",
+      "timestamp": "20260530_222322",
+      "png": "great_lakes_grid_neon_cyberpunk_20260530_222322.png",
+      "svg": null
+    },
+    {
       "id": "germany_grid_japanese_ink_20260530_124616",
       "region": "germany",
       "theme": "japanese_ink",
