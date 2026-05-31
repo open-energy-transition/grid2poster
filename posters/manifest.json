@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "united_states_grid_monochrome_density_20260531_100128",
+      "region": "united_states",
+      "theme": "monochrome_density",
+      "voltage_interpolation": false,
+      "region_display": "United States",
+      "theme_display": "Monochrome Density",
+      "timestamp": "20260531_100128",
+      "png": "united_states_grid_monochrome_density_20260531_100128.png",
+      "svg": null
+    },
+    {
       "id": "europe_grid_monochrome_density_20260531_020937",
       "region": "europe",
       "theme": "monochrome_density",
