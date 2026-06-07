@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "global_grid_global_paper_grid_atlas_20260607_011049",
+      "region": "global",
+      "theme": "global_paper_grid_atlas",
+      "voltage_interpolation": false,
+      "region_display": "Global",
+      "theme_display": "Global Paper Grid Atlas",
+      "timestamp": "20260607_011049",
+      "png": "global_grid_global_paper_grid_atlas_20260607_011049.png",
+      "svg": null
+    },
+    {
       "id": "middle_america_grid_paper_grid_20260606_150850",
       "region": "middle_america",
       "theme": "paper_grid",
@@ -9,17 +20,6 @@
       "theme_display": "Paper Grid",
       "timestamp": "20260606_150850",
       "png": "middle_america_grid_paper_grid_20260606_150850.png",
-      "svg": null
-    },
-    {
-      "id": "global_grid_global_paper_grid_atlas_20260601_133249",
-      "region": "global",
-      "theme": "global_paper_grid_atlas",
-      "voltage_interpolation": false,
-      "region_display": "Global",
-      "theme_display": "Global Paper Grid Atlas",
-      "timestamp": "20260601_133249",
-      "png": "global_grid_global_paper_grid_atlas_20260601_133249.png",
       "svg": null
     },
     {
