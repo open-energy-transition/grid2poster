@@ -1,6 +1,39 @@
 {
   "posters": [
     {
+      "id": "china_grid_prismatic_current_20260608_205506",
+      "region": "china",
+      "theme": "prismatic_current",
+      "voltage_interpolation": false,
+      "region_display": "China",
+      "theme_display": "Prismatic Current",
+      "timestamp": "20260608_205506",
+      "png": "china_grid_prismatic_current_20260608_205506.png",
+      "svg": null
+    },
+    {
+      "id": "argentina_grid_aurora_grid_20260607_184704",
+      "region": "argentina",
+      "theme": "aurora_grid",
+      "voltage_interpolation": false,
+      "region_display": "Argentina",
+      "theme_display": "Aurora Grid",
+      "timestamp": "20260607_184704",
+      "png": "argentina_grid_aurora_grid_20260607_184704.png",
+      "svg": null
+    },
+    {
+      "id": "chile_grid_neon_cyberpunk_20260607_093514",
+      "region": "chile",
+      "theme": "neon_cyberpunk",
+      "voltage_interpolation": false,
+      "region_display": "Chile",
+      "theme_display": "Neon Cyberpunk",
+      "timestamp": "20260607_093514",
+      "png": "chile_grid_neon_cyberpunk_20260607_093514.png",
+      "svg": null
+    },
+    {
       "id": "global_grid_global_paper_grid_atlas_20260607_011049",
       "region": "global",
       "theme": "global_paper_grid_atlas",
@@ -174,17 +207,6 @@
       "theme_display": "Signal Nights",
       "timestamp": "20260527_165439",
       "png": "western_interconnection_grid_signal_nights_20260527_165439.png",
-      "svg": null
-    },
-    {
-      "id": "china_grid_signal_nights_vinterp_20260526_203610",
-      "region": "china",
-      "theme": "signal_nights",
-      "voltage_interpolation": true,
-      "region_display": "China",
-      "theme_display": "Signal Nights",
-      "timestamp": "20260526_203610",
-      "png": "china_grid_signal_nights_vinterp_20260526_203610.png",
       "svg": null
     },
     {
