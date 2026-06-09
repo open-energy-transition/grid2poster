@@ -1,6 +1,17 @@
 {
   "posters": [
     {
+      "id": "china_grid_monochrome_paper_20260609_085408",
+      "region": "china",
+      "theme": "monochrome_paper",
+      "voltage_interpolation": false,
+      "region_display": "China",
+      "theme_display": "Monochrome Paper",
+      "timestamp": "20260609_085408",
+      "png": "china_grid_monochrome_paper_20260609_085408.png",
+      "svg": null
+    },
+    {
       "id": "china_grid_prismatic_current_20260608_205506",
       "region": "china",
       "theme": "prismatic_current",
