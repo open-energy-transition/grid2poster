@@ -1,6 +1,28 @@
 {
   "posters": [
     {
+      "id": "colombia_grid_aurora_grid_20260617_153603",
+      "region": "colombia",
+      "theme": "aurora_grid",
+      "voltage_interpolation": false,
+      "region_display": "Colombia",
+      "theme_display": "Aurora Grid",
+      "timestamp": "20260617_153603",
+      "png": "colombia_grid_aurora_grid_20260617_153603.png",
+      "svg": null
+    },
+    {
+      "id": "colombia_grid_electric_midnight_20260617_153136",
+      "region": "colombia",
+      "theme": "electric_midnight",
+      "voltage_interpolation": false,
+      "region_display": "Colombia",
+      "theme_display": "Electric Midnight",
+      "timestamp": "20260617_153136",
+      "png": "colombia_grid_electric_midnight_20260617_153136.png",
+      "svg": null
+    },
+    {
       "id": "china_grid_monochrome_paper_20260609_085408",
       "region": "china",
       "theme": "monochrome_paper",
