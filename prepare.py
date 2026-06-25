@@ -284,3 +284,42 @@ def prepare_plants(
         plants_projected = plants_projected[plants_projected["capacity_mw"] >= min_capacity_mw]
 
     return plants_projected
+
+
+def prepare_substations(
+    substations: gpd.GeoDataFrame,
+    boundary: gpd.GeoDataFrame,
+    output_crs: str,
+    min_voltage_kv: float = 0.0,
+) -> gpd.GeoDataFrame:
+    """Project substations, reduce them to marker points, clip, and parse voltage.
+
+    Mirrors prepare_plants: substations are mapped as nodes, ways or relations,
+    so representative_point() collapses each to a marker location inside its
+    footprint. Any ``is_highlighted`` column passes through untouched.
+    """
+    if substations.empty:
+        return substations
+
+    substations_projected = substations.to_crs(output_crs).copy()
+    boundary_projected = boundary.to_crs(output_crs)
+
+    substations_projected["geometry"] = substations_projected.geometry.representative_point()
+
+    mask_geom = unary_union(boundary_projected.geometry)
+    shapely.prepare(mask_geom)
+    inside = shapely.contains(mask_geom, substations_projected.geometry.values)
+    substations_projected = substations_projected[inside]
+
+    voltage_raw = substations_projected.get(
+        "voltage", pd.Series(index=substations_projected.index, dtype=object)
+    )
+    substations_projected["voltage_kv"] = voltage_raw.apply(parse_voltage_to_kv)
+
+    if min_voltage_kv > 0:
+        # Explicit threshold = de-clutter; drop unknown-voltage substations too.
+        substations_projected = substations_projected[
+            substations_projected["voltage_kv"].fillna(0) >= min_voltage_kv
+        ]
+
+    return substations_projected

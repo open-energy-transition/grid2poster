@@ -82,6 +82,28 @@ Power plants (`--show-plants`) are drawn as markers sized by installed capacity 
 python create_grid_poster.py --country Austria --show-plants --min-plant-capacity 10
 ```
 
+### Highlighting contributions (e.g. MapYourGrid)
+
+`--highlight-hashtag` and `--highlight-users` make it visible *who* mapped a region's grid. In highlight mode the whole regional grid is drawn dimmed and the matched subset — transmission lines **plus power plants and substations**, which are fetched automatically — is redrawn on top in the theme's vivid `highlight` color. A summary row reports how much of the grid the contribution covers.
+
+- `--highlight-hashtag MapYourGrid` highlights every feature whose OpenStreetMap *changeset* comment or `hashtags` tag contains the hashtag (case-insensitive, leading `#` optional). Because Overpass does not expose changeset comments, each touched changeset is looked up once via the [OSM changeset API](https://wiki.openstreetmap.org/wiki/API_v0.6#Changesets) and cached, so reruns are cheap.
+- `--highlight-users alice,bob` highlights features last edited by any of the listed OSM accounts.
+- Passing both highlights the **union** (a feature matching either is highlighted).
+- `--highlight-since 2024-12-01` restricts highlighting to features last edited on or after that date. Earlier edits can't match (and their changesets are skipped entirely), which also reduces the number of changeset-API lookups — handy when an initiative has a known start date.
+
+Highlight mode always fetches with OSM metadata via the tiled Overpass path, so `--single-query` is ignored. The two bundled themes `paper_grid` and `electric_midnight` ship tuned `highlight` colors; any other theme falls back to its highest-voltage line color. Tune `--highlight-request-delay` to stay polite to the changeset API on very large regions.
+
+```bash
+# Showcase the MapYourGrid initiative across Africa
+python create_grid_poster.py --country Africa --highlight-hashtag MapYourGrid \
+  --theme electric_midnight --tile-size-km 400 --tile-delay 30
+
+# Or highlight specific mappers in a single country
+python create_grid_poster.py --country Kenya --highlight-users alice,bob --theme paper_grid
+```
+
+A theme controls the highlight styling with the optional keys `highlight` (the vivid color for matched features), `highlight_dim_color` (a flat neutral painted over the dimmed base; omit to keep faded tier colors), `highlight_dim_alpha` (how far the base is faded, default `0.18`), and `highlight_lw_scale` (how much thicker matched lines draw, default `1.6`). Substation markers use `substation_marker` (fill) and `substation_outline` (edge).
+
 Use a local GeoJSON file as the boundary instead of geocoding (handy for custom regions or sub-national areas). All polygonal features in the file are dissolved into a single boundary. The `--country` value is still used for the poster title and output filename. `--landscape` will render in landscape (horizontal) orientation.
 ```bash
 python create_grid_poster.py --country "Middle East and North Africa" --boundary-geojson ./regions/mena.geojson --landscape --theme neon_cyberpunk 
@@ -163,6 +185,10 @@ What each flag contributes:
 | `--show-plants` | off | Fetch `power=plant` features and overlay them as markers sized by capacity (`plant:output:electricity`) and colored by source (`plant:source`). |
 | `--min-plant-capacity` | `0.0` | Only draw plants with at least this electrical output in MW. Plants with unknown capacity are dropped when set. |
 | `--plant-marker-scale` | `1.0` | Multiplier for plant marker sizes. Increase for sparse grids, decrease to reduce clutter. |
+| `--highlight-hashtag` | - | Highlight features whose OSM changeset comment/`hashtags` contain this hashtag (case-insensitive, leading `#` optional, e.g. `MapYourGrid`). Enables highlight mode: matched lines draw vividly over a dimmed base, and plants + substations are auto-fetched and highlighted. Resolved via the OSM changeset API (cached). |
+| `--highlight-users` | - | Highlight features last edited by any of these OSM usernames (comma-separated, case-sensitive). Enables highlight mode. Combined with `--highlight-hashtag` by union. |
+| `--highlight-since` | - | Only highlight features last edited on or after this date (`YYYY-MM-DD` or full ISO8601, UTC). Earlier edits are never highlighted and their changesets are skipped, cutting OSM changeset API lookups. E.g. `2024-12-01`. |
+| `--highlight-request-delay` | `1.0` | Seconds between OSM changeset API batch requests when resolving `--highlight-hashtag`. Raise to stay polite on very large regions. |
 | `--include-outlying` | off | Keep overseas territories and other polygons far from the main landmass. By default the geocoded boundary is filtered to the mainland (and nearby islands), so posters for countries like the Netherlands or France do not include Aruba, Curaçao, French Guiana, etc. |
 | `--paper-size` | - | Named preset, portrait orientation. Overrides `--width`/`--height`. Choices: `a5`, `a4`, `a3`, `a2`, `a1`, `a0`, `letter`, `legal`, `tabloid`. Combine with `--landscape` to flip. |
 | `--width` | `297.0` | Poster width in millimeters (default: A3 short side). |

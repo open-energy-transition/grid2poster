@@ -36,14 +36,19 @@ from common import (
     POSTERS_DIR,
     slugify,
 )
+from changesets import resolve_highlight_changesets
 from osm_data import (
+    assign_is_highlighted,
     fetch_power_features,
+    fetch_power_features_meta,
     fetch_power_features_single,
     fetch_power_plants,
+    fetch_power_plants_meta,
+    fetch_substations,
     get_country_boundary,
     load_boundary_from_geojson,
 )
-from prepare import prepare_lines, prepare_plants
+from prepare import prepare_lines, prepare_plants, prepare_substations
 from render import load_logo_image, render_poster
 from theming import list_themes, load_theme
 
@@ -146,6 +151,42 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default=1.0,
         help="Multiplier for plant marker sizes (default 1.0). Increase for sparse "
              "grids, decrease to reduce clutter.",
+    )
+    parser.add_argument(
+        "--highlight-hashtag",
+        default=None,
+        metavar="TAG",
+        help="Highlight power features whose OSM changeset comment/hashtags contain "
+             "this hashtag (case-insensitive, leading '#' optional, e.g. MapYourGrid). "
+             "Enables highlight mode: matched lines are drawn vividly over a dimmed "
+             "base, and power plants + substations are auto-fetched and highlighted.",
+    )
+    parser.add_argument(
+        "--highlight-users",
+        type=parse_user_list,
+        default=set(),
+        metavar="USER1,USER2",
+        help="Highlight power features last-edited by any of these OSM usernames "
+             "(comma-separated, case-sensitive). Enables highlight mode. Combined "
+             "with --highlight-hashtag by union (a feature matching EITHER is highlighted).",
+    )
+    parser.add_argument(
+        "--highlight-since",
+        type=parse_highlight_since,
+        default=None,
+        metavar="DATE",
+        help="Only highlight features last edited on or after this date "
+             "(YYYY-MM-DD or full ISO8601, treated as UTC). Features edited earlier "
+             "are never highlighted and their changesets are skipped, which also cuts "
+             "OSM changeset API lookups for --highlight-hashtag. E.g. 2024-12-01.",
+    )
+    parser.add_argument(
+        "--highlight-request-delay",
+        type=float,
+        default=1.0,
+        metavar="SECONDS",
+        help="Seconds to wait between OSM changeset API batch requests when resolving "
+             "--highlight-hashtag (default: 1.0). Raise to stay polite on large regions.",
     )
     parser.add_argument(
         "--include-outlying",
@@ -298,6 +339,35 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     return parser.parse_args(list(argv))
 
 
+def parse_user_list(value: str) -> set[str]:
+    """Parse a comma-separated list of OSM usernames into a set (whitespace-trimmed)."""
+    return {name.strip() for name in value.split(",") if name.strip()}
+
+
+def parse_highlight_since(value: str) -> str:
+    """Normalize a YYYY-MM-DD (or full ISO8601) cutoff into an OSM-style UTC timestamp.
+
+    OSM `out meta` timestamps look like ``2024-12-01T00:00:00Z`` and sort
+    lexicographically, so returning the same fixed-width format lets the highlight
+    filter compare timestamps as plain strings.
+    """
+    from datetime import datetime, timezone
+
+    text = value.strip()
+    try:
+        if "T" in text:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--highlight-since must be YYYY-MM-DD or ISO8601: {value!r}"
+        )
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def parse_voltage_tiers(value: str) -> tuple[float, float, float, float]:
     """Parse a 'low,mid,high,extra' kV string into a strictly-increasing tuple."""
     parts = [p.strip() for p in value.split(",") if p.strip()]
@@ -367,49 +437,136 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
             mainland_only=not args.include_outlying,
             use_cache=not args.no_cache,
         )
+    highlight_users = args.highlight_users
+    highlight_hashtag = args.highlight_hashtag.lstrip("#").strip() if args.highlight_hashtag else None
+    highlight_mode = bool(highlight_users) or bool(highlight_hashtag)
+    highlight_label = None
+
     cable_buffer_km = args.cable_sea_buffer_km if args.include_cables else 0.0
-    if args.single_query:
-        raw_lines = fetch_power_features_single(
-            country=args.country,
-            boundary=boundary_wgs84,
-            include_minor_lines=args.include_minor_lines,
-            include_cables=args.include_cables,
-            sea_buffer_km=cable_buffer_km,
-            render_crs=args.crs,
-            use_cache=not args.no_cache,
-        )
-    else:
-        raw_lines = fetch_power_features(
-            country=args.country,
-            boundary=boundary_wgs84,
-            include_minor_lines=args.include_minor_lines,
-            include_cables=args.include_cables,
-            tile_size_km=args.tile_size_km,
-            render_crs=args.crs,
-            sea_buffer_km=cable_buffer_km,
-            use_cache=not args.no_cache,
-            tile_delay=args.tile_delay,
-        )
-
     boundary_projected = boundary_wgs84.to_crs(args.crs)
-    lines_projected = prepare_lines(
-        raw_lines, boundary_wgs84, args.crs, cable_sea_buffer_km=cable_buffer_km
-    )
+    substations_projected = None
 
-    plants_projected = None
-    if args.show_plants:
-        raw_plants = fetch_power_plants(
+    if highlight_mode:
+        # Highlight mode needs per-element metadata (user/changeset), which only
+        # the tiled raw-Overpass path returns — so --single-query is ignored here.
+        if args.single_query:
+            print("Note: --single-query is ignored in highlight mode (metadata needs the tiled fetch).")
+        highlight_label = highlight_hashtag.upper() if highlight_hashtag else "CONTRIBUTIONS"
+
+        raw_lines = fetch_power_features_meta(
+            country=args.country,
+            boundary=boundary_wgs84,
+            include_minor_lines=args.include_minor_lines,
+            include_cables=args.include_cables,
+            tile_size_km=args.tile_size_km,
+            render_crs=args.crs,
+            sea_buffer_km=cable_buffer_km,
+            use_cache=not args.no_cache,
+            tile_delay=args.tile_delay,
+        )
+        raw_plants = fetch_power_plants_meta(
             country=args.country,
             boundary=boundary_wgs84,
             tile_size_km=args.tile_size_km,
             render_crs=args.crs,
             use_cache=not args.no_cache,
             tile_delay=args.tile_delay,
+        )
+        raw_subs = fetch_substations(
+            country=args.country,
+            boundary=boundary_wgs84,
+            tile_size_km=args.tile_size_km,
+            render_crs=args.crs,
+            use_cache=not args.no_cache,
+            tile_delay=args.tile_delay,
+        )
+
+        since = args.highlight_since
+
+        highlight_changesets: set[int] = set()
+        if highlight_hashtag:
+            changeset_ids: set = set()
+            for frame in (raw_lines, raw_plants, raw_subs):
+                if frame is not None and not frame.empty and "changeset" in frame.columns:
+                    recent = frame
+                    if since and "timestamp" in frame.columns:
+                        # Skip pre-cutoff edits so their changesets are never looked up.
+                        recent = frame[frame["timestamp"].fillna("").astype(str) >= since]
+                    changeset_ids.update(recent["changeset"].dropna().tolist())
+            since_note = f" edited since {since}" if since else ""
+            print(f"Resolving #{highlight_hashtag} across {len(changeset_ids):,} changeset(s){since_note}")
+            highlight_changesets = resolve_highlight_changesets(
+                changeset_ids,
+                highlight_hashtag,
+                use_cache=not args.no_cache,
+                request_delay=args.highlight_request_delay,
+            )
+
+        for frame in (raw_lines, raw_plants, raw_subs):
+            if frame is not None and not frame.empty:
+                frame["is_highlighted"] = assign_is_highlighted(
+                    frame, highlight_users, highlight_changesets, since=since
+                )
+
+        lines_projected = prepare_lines(
+            raw_lines, boundary_wgs84, args.crs, cable_sea_buffer_km=cable_buffer_km
         )
         plants_projected = prepare_plants(
             raw_plants, boundary_wgs84, args.crs, min_capacity_mw=args.min_plant_capacity
         )
-        print(f"Plants after preparation: {len(plants_projected):,}")
+        substations_projected = prepare_substations(raw_subs, boundary_wgs84, args.crs)
+
+        def _hl_count(frame) -> int:
+            if frame is None or frame.empty or "is_highlighted" not in frame.columns:
+                return 0
+            return int(frame["is_highlighted"].sum())
+
+        print(
+            f"Highlighted ({highlight_label}): {_hl_count(lines_projected):,} line segments, "
+            f"{_hl_count(plants_projected):,} plants, {_hl_count(substations_projected):,} substations"
+        )
+    else:
+        if args.single_query:
+            raw_lines = fetch_power_features_single(
+                country=args.country,
+                boundary=boundary_wgs84,
+                include_minor_lines=args.include_minor_lines,
+                include_cables=args.include_cables,
+                sea_buffer_km=cable_buffer_km,
+                render_crs=args.crs,
+                use_cache=not args.no_cache,
+            )
+        else:
+            raw_lines = fetch_power_features(
+                country=args.country,
+                boundary=boundary_wgs84,
+                include_minor_lines=args.include_minor_lines,
+                include_cables=args.include_cables,
+                tile_size_km=args.tile_size_km,
+                render_crs=args.crs,
+                sea_buffer_km=cable_buffer_km,
+                use_cache=not args.no_cache,
+                tile_delay=args.tile_delay,
+            )
+
+        lines_projected = prepare_lines(
+            raw_lines, boundary_wgs84, args.crs, cable_sea_buffer_km=cable_buffer_km
+        )
+
+        plants_projected = None
+        if args.show_plants:
+            raw_plants = fetch_power_plants(
+                country=args.country,
+                boundary=boundary_wgs84,
+                tile_size_km=args.tile_size_km,
+                render_crs=args.crs,
+                use_cache=not args.no_cache,
+                tile_delay=args.tile_delay,
+            )
+            plants_projected = prepare_plants(
+                raw_plants, boundary_wgs84, args.crs, min_capacity_mw=args.min_plant_capacity
+            )
+            print(f"Plants after preparation: {len(plants_projected):,}")
 
     if args.output:
         fmt = (args.output.suffix.lstrip(".") or args.format[0]).lower()
@@ -462,6 +619,9 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
         fade_bottom_alpha=args.fade_bottom_alpha,
         plants=plants_projected,
         plant_marker_scale=args.plant_marker_scale,
+        substations=substations_projected,
+        highlight_mode=highlight_mode,
+        highlight_label=highlight_label,
     )
     return 0
 

@@ -15,7 +15,14 @@ from matplotlib.offsetbox import AnchoredOffsetbox, HPacker, TextArea
 
 from common import DEFAULT_VOLTAGE_TIERS, MM_PER_INCH, tqdm
 from prepare import PLANT_SOURCE_BUCKETS
-from theming import Theme, compute_line_styles, compute_plant_styles, derive_plant_colors
+from theming import (
+    Theme,
+    compute_line_styles,
+    compute_plant_styles,
+    compute_substation_styles,
+    derive_plant_colors,
+    substation_colors,
+)
 
 # Half (thin) space placed between a number and its unit, e.g. "380 kV".
 # Rendered via matplotlib mathtext, where "\," is a thin space.
@@ -213,6 +220,9 @@ def render_poster(
     fade_bottom_alpha: float = 1.0,
     plants: gpd.GeoDataFrame | None = None,
     plant_marker_scale: float = 1.0,
+    substations: gpd.GeoDataFrame | None = None,
+    highlight_mode: bool = False,
+    highlight_label: str | None = None,
 ) -> None:
     # A transparent backdrop keeps the grid, text and fades but drops the solid
     # theme background, so the poster can be composited over other artwork.
@@ -229,29 +239,37 @@ def render_poster(
         lines,
         theme,
         voltage_tiers=voltage_tiers,
+        highlight_mode=highlight_mode,
     ))
-    grouped = styled.groupby(["_color", "_linewidth", "_alpha"], sort=False)
-    group_iter = tqdm(
-        grouped,
-        total=grouped.ngroups,
-        desc="Rendering line groups",
-        unit="group",
-        leave=True,
-    )
-    for (color, linewidth, alpha), group in group_iter:
-        # Higher-voltage groups draw on top of lower ones so the backbone reads
-        # clearly. Cap the contribution well below the gradient-fade band (10)
-        # and the title/overlay band (TEXT_ZORDER) so a mis-tagged voltage value
-        # (e.g. an OSM tag in volts that slips through as a huge kV) can never
-        # push a line group on top of the title text.
-        zorder = 2 + min(group["sort_voltage"].max() / 1000.0, 6.0)
-        group.plot(
-            ax=ax,
-            color=color,
-            linewidth=linewidth,
-            alpha=alpha,
-            zorder=zorder,
-        )
+
+    def _draw_line_groups(frame: gpd.GeoDataFrame, zorder_fn, desc: str) -> None:
+        if frame.empty:
+            return
+        grouped = frame.groupby(["_color", "_linewidth", "_alpha"], sort=False)
+        for (color, linewidth, alpha), group in tqdm(
+            grouped, total=grouped.ngroups, desc=desc, unit="group", leave=True
+        ):
+            group.plot(ax=ax, color=color, linewidth=linewidth, alpha=alpha, zorder=zorder_fn(group))
+
+    # Higher-voltage groups draw on top of lower ones so the backbone reads
+    # clearly. Cap the contribution well below the gradient-fade band (10) and
+    # the title/overlay band (TEXT_ZORDER) so a mis-tagged voltage value (e.g. an
+    # OSM tag in volts that slips through as a huge kV) can never push a line
+    # group on top of the title text.
+    def _voltage_zorder(group: gpd.GeoDataFrame) -> float:
+        return 2 + min(group["sort_voltage"].max() / 1000.0, 6.0)
+
+    if highlight_mode and "is_highlighted" in styled.columns:
+        hi_mask = styled["is_highlighted"].to_numpy(dtype=bool)
+        # Dimmed base first, then highlighted contributions at a fixed higher
+        # zorder (8.5) so they always sit on top of all dimmed base lines but
+        # still below the fades (10) and text (TEXT_ZORDER).
+        _draw_line_groups(styled[~hi_mask], _voltage_zorder, "Rendering base lines")
+        _draw_line_groups(styled[hi_mask], lambda _g: 8.5, "Rendering highlighted lines")
+    else:
+        _draw_line_groups(styled, _voltage_zorder, "Rendering line groups")
+
+    highlight_color = theme.highlight or theme.line_extra
 
     plant_color_map: dict[str, str] = {}
     if plants is not None and not plants.empty:
@@ -261,20 +279,59 @@ def render_poster(
         )
         styled_plants = plants.assign(**plant_styles)
         edge_color = theme.plant_edge if theme.plant_edge is not None else bg_color
-        # One scatter per source bucket, mirroring the grouped line plotting.
-        # zorder 9 sits above every line group (capped at 8) but under the
-        # gradient fades (10) so markers dim toward the poster edges.
-        for bucket, group in styled_plants.groupby("source_bucket", sort=False):
+
+        def _scatter_plants(frame: gpd.GeoDataFrame, zorder: float, alpha: float, color_override=None) -> None:
+            # One scatter per source bucket (mirroring the grouped line plotting)
+            # unless an override paints the whole subset a single color. zorder 9+
+            # sits above every line group (capped at 8) but under the gradient
+            # fades (10) so markers dim toward the poster edges.
+            if frame.empty:
+                return
+            if color_override is not None:
+                ax.scatter(
+                    frame.geometry.x, frame.geometry.y,
+                    s=frame["_psize"].to_numpy(dtype="float64"),
+                    c=color_override, edgecolors=edge_color, linewidths=0.4,
+                    alpha=alpha, zorder=zorder,
+                )
+                return
+            for bucket, group in frame.groupby("source_bucket", sort=False):
+                ax.scatter(
+                    group.geometry.x, group.geometry.y,
+                    s=group["_psize"].to_numpy(dtype="float64"),
+                    c=plant_color_map[bucket], edgecolors=edge_color, linewidths=0.4,
+                    alpha=alpha, zorder=zorder,
+                )
+
+        if highlight_mode and "is_highlighted" in styled_plants.columns:
+            hp = styled_plants["is_highlighted"].to_numpy(dtype=bool)
+            _scatter_plants(styled_plants[~hp], zorder=9, alpha=0.30)
+            _scatter_plants(styled_plants[hp], zorder=9.3, alpha=0.95, color_override=highlight_color)
+        else:
+            _scatter_plants(styled_plants, zorder=9, alpha=0.85)
+
+    if substations is not None and not substations.empty:
+        sub_styles = compute_substation_styles(substations, theme, marker_scale=plant_marker_scale)
+        styled_subs = substations.assign(**sub_styles)
+        sub_face, sub_edge = substation_colors(theme)
+
+        def _scatter_subs(frame: gpd.GeoDataFrame, zorder: float, alpha: float, color_override=None) -> None:
+            # Square marker distinguishes substations from the round plant dots.
+            if frame.empty:
+                return
             ax.scatter(
-                group.geometry.x,
-                group.geometry.y,
-                s=group["_psize"].to_numpy(dtype="float64"),
-                c=plant_color_map[bucket],
-                edgecolors=edge_color,
-                linewidths=0.4,
-                alpha=0.85,
-                zorder=9,
+                frame.geometry.x, frame.geometry.y,
+                s=frame["_ssize"].to_numpy(dtype="float64"),
+                marker="s", c=(color_override or sub_face), edgecolors=sub_edge,
+                linewidths=0.4, alpha=alpha, zorder=zorder,
             )
+
+        if highlight_mode and "is_highlighted" in styled_subs.columns:
+            hs = styled_subs["is_highlighted"].to_numpy(dtype=bool)
+            _scatter_subs(styled_subs[~hs], zorder=9.1, alpha=0.30)
+            _scatter_subs(styled_subs[hs], zorder=9.4, alpha=0.95, color_override=highlight_color)
+        else:
+            _scatter_subs(styled_subs, zorder=9.1, alpha=0.85)
 
     ax.set_aspect("equal", adjustable="box")
     set_country_extent(ax, boundary, width, height, padding=padding, shift_x=shift_x, shift_y=shift_y)
@@ -329,6 +386,20 @@ def render_poster(
                 gw = float(np.nan_to_num(bucket_gw[bucket]))
                 plant_rows.append((bucket.upper(), plant_color_map[bucket], gw))
 
+    # Highlight summary: how much of the grid the contribution covers. In
+    # highlight mode this single row replaces the voltage/plant breakdowns.
+    def _highlighted_count(frame: gpd.GeoDataFrame | None) -> int:
+        if frame is None or frame.empty or "is_highlighted" not in frame.columns:
+            return 0
+        return int(frame["is_highlighted"].to_numpy(dtype=bool).sum())
+
+    highlight_km = 0.0
+    if highlight_mode and "is_highlighted" in lines.columns:
+        hl_mask = lines["is_highlighted"].to_numpy(dtype=bool)
+        highlight_km = float(lines.loc[hl_mask].geometry.length.sum()) / 1000.0
+    n_hl_plants = _highlighted_count(plants) if highlight_mode else 0
+    n_hl_subs = _highlighted_count(substations) if highlight_mode else 0
+
     ax.text(
         0.5,
         0.130,
@@ -368,7 +439,23 @@ def render_poster(
         anchored.set_zorder(TEXT_ZORDER)
         ax.add_artist(anchored)
 
-    if include_metadata and breakdown_rows:
+    if include_metadata and highlight_mode:
+        # In highlight mode a single contribution-summary row replaces the
+        # voltage/plant breakdowns, in the vivid highlight color so it ties back
+        # to the highlighted features on the map.
+        label = highlight_label or "CONTRIBUTIONS"
+        children = [_seg(str(year), theme.subtext, 0.85)]
+        children.append(_seg("·", theme.subtext, 0.85))
+        children.append(_seg(label, highlight_color, 0.97))
+        children.append(_seg(f"{highlight_km:,.0f}{THIN_SPACE}km", theme.subtext, 0.85))
+        if n_hl_plants:
+            children.append(_seg("·", theme.subtext, 0.85))
+            children.append(_seg(f"{n_hl_plants:,} plants", theme.subtext, 0.85))
+        if n_hl_subs:
+            children.append(_seg("·", theme.subtext, 0.85))
+            children.append(_seg(f"{n_hl_subs:,} substations", theme.subtext, 0.85))
+        _add_metadata_row(children, 0.064)
+    elif include_metadata and breakdown_rows:
         children = [_seg(str(year), theme.subtext, 0.85)]
         for label, color, tier_km in breakdown_rows:
             children.append(_seg("·", theme.subtext, 0.85))
@@ -389,7 +476,7 @@ def render_poster(
             zorder=TEXT_ZORDER,
         )
 
-    if include_metadata and plant_rows:
+    if include_metadata and not highlight_mode and plant_rows:
         # Second breakdown row: installed capacity per plant source, placed
         # between the voltage row (0.064) and the credit line (0.018).
         children = []

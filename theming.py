@@ -103,6 +103,20 @@ class Theme:
     plant_biomass: str | None = None
     plant_other: str | None = None
     plant_edge: str | None = None
+    # Highlight-contributions mode. When active, all base features are dimmed
+    # toward the background by highlight_dim_alpha and the matched subset is
+    # redrawn in `highlight` (falling back to line_extra when omitted) at
+    # highlight_lw_scale times its tier width. highlight_dim_color optionally
+    # repaints the dimmed base a single neutral color; None keeps tier colors.
+    highlight: str | None = None
+    highlight_dim_alpha: float = 0.18
+    highlight_lw_scale: float = 1.6
+    highlight_dim_color: str | None = None
+    # Substation markers. Theme JSONs already ship these keys; marker is the
+    # fill, outline the edge. Omitted keys fall back to palette defaults in render.
+    substation_fill: str | None = None
+    substation_outline: str | None = None
+    substation_marker: str | None = None
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "Theme":
@@ -126,7 +140,10 @@ class Theme:
         kwargs: dict[str, Any] = {key: raw[key] for key in required}
         # Per-tier line widths and cable width scale are optional; fall back to
         # the dataclass defaults.
-        for key in ("lw_unknown", "lw_low", "lw_mid", "lw_high", "lw_extra", "lw_minor", "cable_lw_scale"):
+        for key in (
+            "lw_unknown", "lw_low", "lw_mid", "lw_high", "lw_extra", "lw_minor",
+            "cable_lw_scale", "highlight_dim_alpha", "highlight_lw_scale",
+        ):
             if key in raw:
                 kwargs[key] = float(raw[key])
         if "cable_color" in raw:
@@ -144,6 +161,11 @@ class Theme:
             "plant_biomass",
             "plant_other",
             "plant_edge",
+            "highlight",
+            "highlight_dim_color",
+            "substation_fill",
+            "substation_outline",
+            "substation_marker",
         ):
             if key in raw:
                 kwargs[key] = raw[key]
@@ -237,11 +259,14 @@ def compute_line_styles(
     theme: Theme,
     *,
     voltage_tiers: tuple[float, float, float, float] = DEFAULT_VOLTAGE_TIERS,
+    highlight_mode: bool = False,
 ) -> dict[str, np.ndarray]:
     """Vectorized per-row (color, linewidth, alpha) for the whole frame.
 
     Lets render_poster batch segments into one matplotlib call per style group
-    instead of one call per segment.
+    instead of one call per segment. When ``highlight_mode`` is on and an
+    ``is_highlighted`` column is present, the whole frame is dimmed and the
+    matched subset is repainted in the theme highlight color on top.
     """
     low_kv, mid_kv, high_kv, extra_kv = voltage_tiers
     kv = lines["voltage_kv"].astype("float64").to_numpy()
@@ -283,6 +308,20 @@ def compute_line_styles(
         linewidths[is_cable] = linewidths[is_cable] * theme.cable_lw_scale
         alphas[is_cable] = alphas[is_cable] * 0.5
 
+    # Highlight override wins over every tier/minor/cable rule above so the
+    # contributed subset always reads as the headline of the poster.
+    if highlight_mode and "is_highlighted" in lines.columns:
+        hi = lines["is_highlighted"].to_numpy(dtype=bool)
+        highlight_color = theme.highlight or theme.line_extra
+        # Dim the entire base first...
+        if theme.highlight_dim_color is not None:
+            colors = np.full(n, theme.highlight_dim_color, dtype=object)
+        alphas = alphas * theme.highlight_dim_alpha
+        # ...then lift the matched subset back up in the vivid highlight color.
+        colors[hi] = highlight_color
+        linewidths[hi] = linewidths[hi] * theme.highlight_lw_scale
+        alphas[hi] = 0.98
+
     return {"_color": colors, "_linewidth": linewidths, "_alpha": alphas}
 
 
@@ -317,3 +356,34 @@ def compute_plant_styles(
     sizes = sizes * marker_scale
 
     return {"_pcolor": colors, "_psize": sizes}
+
+
+# Substations carry no comparable capacity tag, so they render at a single fixed
+# marker size (matplotlib scatter ``s``, pt²) tunable via marker_scale.
+SUBSTATION_MARKER_PT2 = 26.0
+
+
+def substation_colors(theme: Theme) -> tuple[str, str]:
+    """(face, edge) colors for substation markers, derived from the theme.
+
+    Honors the optional substation_marker/substation_fill (face) and
+    substation_outline (edge) theme keys; otherwise picks palette-matched
+    defaults that read on both dark and light backgrounds.
+    """
+    face = theme.substation_marker or theme.substation_fill or theme.line_high
+    edge = theme.substation_outline or theme.subtext
+    return face, edge
+
+
+def compute_substation_styles(
+    substations: gpd.GeoDataFrame,
+    theme: Theme,
+    *,
+    marker_scale: float = 1.0,
+) -> dict[str, np.ndarray]:
+    """Vectorized per-substation (face color, marker size) for the whole frame."""
+    face, _edge = substation_colors(theme)
+    n = len(substations)
+    colors = np.full(n, face, dtype=object)
+    sizes = np.full(n, SUBSTATION_MARKER_PT2 * marker_scale)
+    return {"_scolor": colors, "_ssize": sizes}
