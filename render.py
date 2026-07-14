@@ -213,6 +213,8 @@ def render_poster(
     fade_bottom_alpha: float = 1.0,
     plants: gpd.GeoDataFrame | None = None,
     plant_marker_scale: float = 1.0,
+    as_of_year: int | None = None,
+    emphasize_year: bool = False,
 ) -> None:
     # A transparent backdrop keeps the grid, text and fades but drops the solid
     # theme background, so the poster can be composited over other artwork.
@@ -291,7 +293,7 @@ def render_poster(
     font_sub = FontProperties(family="DejaVu Sans", weight="normal", size=15 * scale)
     font_meta = FontProperties(family="DejaVu Sans Mono", weight="normal", size=8.5 * scale)
 
-    year = datetime.now().year
+    year = as_of_year if as_of_year is not None else datetime.now().year
     low_kv, mid_kv, high_kv, extra_kv = voltage_tiers
     total_length_km = float(lines.geometry.length.sum()) / 1000.0
     high_voltage_length_km = float(lines.loc[lines["voltage_kv"].fillna(0) >= mid_kv].geometry.length.sum()) / 1000.0
@@ -421,6 +423,24 @@ def render_poster(
         fontproperties=font_meta,
         zorder=TEXT_ZORDER,
     )
+
+    if emphasize_year and as_of_year is not None:
+        # Large, high-contrast year counter for time-lapse frames — the
+        # metadata row already prints the year, but at a size easy to miss
+        # while frames are flipping in a GIF.
+        font_year = FontProperties(family="DejaVu Sans", weight="bold", size=22 * scale)
+        ax.text(
+            0.95,
+            0.95,
+            f"Mapping Progress in {as_of_year}",
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            color=theme.text,
+            fontproperties=font_year,
+            alpha=0.92,
+            zorder=TEXT_ZORDER,
+        )
 
     if logo_image is not None:
         add_logo(fig, logo_image, width, height, logo_size_mm, logo_margin_mm, logo_alpha)

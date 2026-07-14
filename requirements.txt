@@ -5,3 +5,4 @@ numpy
 pandas
 shapely
 tqdm
+Pillow

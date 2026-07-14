@@ -143,6 +143,28 @@ What each flag contributes:
 </p>
 
 
+## Time-lapse GIF
+
+`create_grid_gif.py` renders the same poster once per snapshot year and stitches the frames into an animated GIF, using Overpass's `date:` (attic data) query to fetch OpenStreetMap's power-grid mapping as it existed at each point in time - handy for visualizing how a region's grid mapping has grown.
+
+```bash
+python create_grid_gif.py --country Africa --theme paper_grid \
+  --start-year 2016 --end-year 2026 --step-years 1 \
+  -o posters/africa_grid_timelapse.gif
+```
+
+`--start-year`/`--end-year`/`--step-years` default to the last 10 years, one year per frame, so the command above is equivalent to just `python create_grid_gif.py --country Africa`. It accepts almost every option from `create_grid_poster.py` (theme, padding, voltage tiers, `--include-minor-lines`, `--show-plants`, `--boundary-geojson`, etc.) plus:
+
+- `--month-day` - the `MM-DD` snapshot date used within each year (default `01-01`).
+- `--frame-duration-ms` / `--end-hold-ms` - per-frame display time and extra hold on the final frame.
+- `--loop` - GIF loop count (`0` = loop forever).
+- `--frames-dir` / `--keep-frames` - keep the individual per-year PNG frames instead of discarding them once the GIF is assembled.
+
+Two caveats worth knowing:
+
+- The country/region **boundary is not historicized** - it's resolved once from Nominatim/Natural Earth (current-day borders) and reused for every frame, since neither source has historical boundary data.
+- Historical Overpass queries are slower and noticeably more timeout-prone on the public `overpass-api.de` instance than current-data queries. The tiled fetch path (the default - avoid `--single-query` here) has retry/backoff built in and absorbs transient failures, but a continent-scale, multi-year time-lapse can take a very long time. If the same tile(s) fail over and over regardless of `--tile-size-km`, that area's history is simply too expensive for Overpass to compute within the default 180s - raise `--overpass-timeout` (e.g. `400`) rather than shrinking tiles further. A generous `--tile-delay` or an Overpass mirror (`--overpass-endpoint`) can also help.
+
 ## Options
 
 | Option | Default | Description |
@@ -183,6 +205,7 @@ What each flag contributes:
 | `--logo-alpha` | `1.0` | Logo opacity, from `0` (transparent) to `1` (fully opaque). |
 | `--single-query` | off | Fetch all power features in a single Overpass query instead of tiling. Faster for small/medium regions but may time out on large countries or continents. |
 | `--tile-delay` | `30` | Seconds to wait between Overpass tile API requests. Useful to avoid rate-limiting on busy public endpoints. |
+| `--overpass-timeout` | `180` | Seconds Overpass is allowed to spend per query (and how long the client waits for a response). Raise this if specific tiles consistently time out - some areas, or historical `--date` (attic) queries in `create_grid_gif.py`, need more than the default regardless of tile size. |
 | `--export-geojson` | off | Also save all transmission lines as a single GeoJSON in WGS84 (EPSG:4326). Pass a path to override the default location in `posters/`. |
 | `--no-cache` | off | Ignore cached boundaries and OSM power features on this run. Fresh results are still written to the cache for future runs. |
 | `--verbose-osmnx` | off | Print OSMnx request logs. |
