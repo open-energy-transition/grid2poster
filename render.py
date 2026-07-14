@@ -432,7 +432,7 @@ def render_poster(
         ax.text(
             0.95,
             0.95,
-            str(as_of_year),
+            f"Mapping Progress in {as_of_year}",
             transform=ax.transAxes,
             ha="right",
             va="top",
