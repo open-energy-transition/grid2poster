@@ -27,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+import geopandas as gpd
 import osmnx as ox
 
 from common import (
@@ -53,30 +54,14 @@ def output_path(country: str, theme_id: str, fmt: str) -> Path:
     return POSTERS_DIR / f"{slugify(country)}_grid_{theme_id}_{timestamp}.{fmt}"
 
 
-def parse_args(argv: Iterable[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Create country electrical transmission grid posters from OpenStreetMap power=line data.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument("--country", "-C", required=False, help="Country or region name resolvable by Nominatim")
-    parser.add_argument(
-        "--boundary-geojson",
-        type=Path,
-        help="Load the boundary polygon(s) from a local GeoJSON file instead of geocoding via Nominatim. "
-             "All polygonal features in the file are dissolved into a single boundary.",
-    )
-    parser.add_argument(
-        "--internal-borders",
-        action="store_true",
-        help="When loading --boundary-geojson, keep each feature as a separate part so borders "
-             "shared between adjacent features (e.g. provinces) are drawn instead of dissolved away.",
-    )
-    parser.add_argument("--display-country", help="Text to print on the poster")
-    parser.add_argument(
-        "--subtitle",
-        help="Override the poster subtitle (default: 'ELECTRICAL TRANSMISSION GRID', "
-             "or 'ELECTRICAL GRID' with --include-minor-lines)",
-    )
+def add_common_poster_arguments(parser: argparse.ArgumentParser) -> None:
+    """Register the CLI flags shared by single-poster and time-lapse-GIF generation.
+
+    Kept separate from the poster-only flags (``--country``, ``--format``,
+    ``--output``, etc.) in ``parse_args`` so ``create_grid_gif.py`` can reuse
+    this exact surface instead of redeclaring ~30 flags.
+    """
+    parser.add_argument("--theme", "-t", default="paper_grid", help="Theme ID from themes/")
     parser.add_argument(
         "--padding",
         type=float,
@@ -100,8 +85,6 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
              "data extent. Positive values shift up, negative shift down "
              "(e.g. 0.1 = shift 10%% up).",
     )
-    parser.add_argument("--theme", "-t", default="paper_grid", help="Theme ID from themes/")
-    parser.add_argument("--list-themes", action="store_true", help="List available themes and exit")
     parser.add_argument(
         "--voltage-tiers",
         type=parse_voltage_tiers,
@@ -159,8 +142,8 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         help="Preset paper size in portrait orientation. Overrides --width and --height. "
              "Use --landscape to flip orientation.",
     )
-    parser.add_argument("--width", "-W", type=float, default=297.0, help="Poster width in millimeters (default: A3 short side)")
-    parser.add_argument("--height", "-H", type=float, default=420.0, help="Poster height in millimeters (default: A3 long side)")
+    parser.add_argument("--width", "-W", type=float, default=297.0, help="Poster width in millimeters")
+    parser.add_argument("--height", "-H", type=float, default=420.0, help="Poster height in millimeters")
     parser.add_argument(
         "--landscape",
         action="store_true",
@@ -178,20 +161,6 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         type=float,
         default=400,
         help="Overpass query tile size in kilometers. Use smaller values for very large countries or busy servers.",
-    )
-    parser.add_argument(
-        "--format",
-        "-f",
-        nargs="+",
-        choices=["png", "svg", "pdf"],
-        default=["png", "svg"],
-        help="Output format(s). Pass multiple values to write the poster in several formats at once.",
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        type=Path,
-        help="Output file path. When set, only a single file is written and its format is inferred from the extension.",
     )
     parser.add_argument(
         "--crs",
@@ -260,14 +229,6 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         help="Logo opacity from 0 (transparent) to 1 (fully opaque).",
     )
     parser.add_argument(
-        "--export-geojson",
-        nargs="?",
-        const="",
-        default=None,
-        help="Also save all transmission lines as a single GeoJSON (WGS84). "
-             "Optionally pass a path; otherwise written next to the poster.",
-    )
-    parser.add_argument(
         "--single-query",
         action="store_true",
         help="Fetch all power features in a single Overpass query instead of tiling. "
@@ -279,6 +240,15 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default=30,
         help="Seconds to wait between Overpass tile API requests (default: 30). "
              "Useful to avoid rate-limiting on busy public endpoints.",
+    )
+    parser.add_argument(
+        "--overpass-timeout",
+        type=int,
+        default=180,
+        help="Seconds Overpass is allowed to spend per query, and how long the client waits "
+             "for a response. Raise this if specific tiles consistently time out - some areas "
+             "(dense cities, or historical/attic '--date' queries) need more than the default "
+             "to compute, no matter how small the tile is.",
     )
     parser.add_argument("--verbose-osmnx", action="store_true", help="Print OSMnx request logs")
     parser.add_argument(
@@ -295,6 +265,56 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         help="Ignore cached boundaries and OSM power features on this run. "
              "Fresh results are still written to the cache for future runs.",
     )
+
+
+def parse_args(argv: Iterable[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Create country electrical transmission grid posters from OpenStreetMap power=line data.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("--country", "-C", required=False, help="Country or region name resolvable by Nominatim")
+    parser.add_argument(
+        "--boundary-geojson",
+        type=Path,
+        help="Load the boundary polygon(s) from a local GeoJSON file instead of geocoding via Nominatim. "
+             "All polygonal features in the file are dissolved into a single boundary.",
+    )
+    parser.add_argument(
+        "--internal-borders",
+        action="store_true",
+        help="When loading --boundary-geojson, keep each feature as a separate part so borders "
+             "shared between adjacent features (e.g. provinces) are drawn instead of dissolved away.",
+    )
+    parser.add_argument("--display-country", help="Text to print on the poster")
+    parser.add_argument(
+        "--subtitle",
+        help="Override the poster subtitle (default: 'ELECTRICAL TRANSMISSION GRID', "
+             "or 'ELECTRICAL GRID' with --include-minor-lines)",
+    )
+    parser.add_argument("--list-themes", action="store_true", help="List available themes and exit")
+    parser.add_argument(
+        "--format",
+        "-f",
+        nargs="+",
+        choices=["png", "svg", "pdf"],
+        default=["png", "svg"],
+        help="Output format(s). Pass multiple values to write the poster in several formats at once.",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        help="Output file path. When set, only a single file is written and its format is inferred from the extension.",
+    )
+    parser.add_argument(
+        "--export-geojson",
+        nargs="?",
+        const="",
+        default=None,
+        help="Also save all transmission lines as a single GeoJSON (WGS84). "
+             "Optionally pass a path; otherwise written next to the poster.",
+    )
+    add_common_poster_arguments(parser)
     return parser.parse_args(list(argv))
 
 
@@ -318,6 +338,67 @@ def parse_voltage_tiers(value: str) -> tuple[float, float, float, float]:
     return tiers  # type: ignore[return-value]
 
 
+def fetch_lines_and_plants(
+    args: argparse.Namespace,
+    boundary_wgs84: gpd.GeoDataFrame,
+    historical_date: str | None = None,
+) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame | None]:
+    """Fetch and prepare power lines (and optionally plants) for one snapshot.
+
+    ``historical_date`` (ISO 8601, e.g. ``"2020-01-01T00:00:00Z"``) requests
+    attic (point-in-time) OSM data instead of the current state — this is the
+    hook ``create_grid_gif.py`` uses to fetch one snapshot per frame while
+    reusing the same boundary and CLI options.
+    """
+    cable_buffer_km = args.cable_sea_buffer_km if args.include_cables else 0.0
+    if args.single_query:
+        raw_lines = fetch_power_features_single(
+            country=args.country,
+            boundary=boundary_wgs84,
+            include_minor_lines=args.include_minor_lines,
+            include_cables=args.include_cables,
+            sea_buffer_km=cable_buffer_km,
+            render_crs=args.crs,
+            use_cache=not args.no_cache,
+            historical_date=historical_date,
+        )
+    else:
+        raw_lines = fetch_power_features(
+            country=args.country,
+            boundary=boundary_wgs84,
+            include_minor_lines=args.include_minor_lines,
+            include_cables=args.include_cables,
+            tile_size_km=args.tile_size_km,
+            render_crs=args.crs,
+            sea_buffer_km=cable_buffer_km,
+            use_cache=not args.no_cache,
+            tile_delay=args.tile_delay,
+            historical_date=historical_date,
+        )
+
+    lines_projected = prepare_lines(
+        raw_lines, boundary_wgs84, args.crs, cable_sea_buffer_km=cable_buffer_km
+    )
+
+    plants_projected = None
+    if args.show_plants:
+        raw_plants = fetch_power_plants(
+            country=args.country,
+            boundary=boundary_wgs84,
+            tile_size_km=args.tile_size_km,
+            render_crs=args.crs,
+            use_cache=not args.no_cache,
+            tile_delay=args.tile_delay,
+            historical_date=historical_date,
+        )
+        plants_projected = prepare_plants(
+            raw_plants, boundary_wgs84, args.crs, min_capacity_mw=args.min_plant_capacity
+        )
+        print(f"Plants after preparation: {len(plants_projected):,}")
+
+    return lines_projected, plants_projected
+
+
 def main(argv: Iterable[str] = sys.argv[1:]) -> int:
     args = parse_args(argv)
 
@@ -330,7 +411,7 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
 
     ox.settings.use_cache = not args.no_cache
     ox.settings.log_console = bool(args.verbose_osmnx)
-    ox.settings.requests_timeout = 180
+    ox.settings.requests_timeout = args.overpass_timeout
     if args.overpass_endpoint:
         ox.settings.overpass_url = args.overpass_endpoint
         print(f"Using Overpass endpoint: {args.overpass_endpoint}")
@@ -367,49 +448,8 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
             mainland_only=not args.include_outlying,
             use_cache=not args.no_cache,
         )
-    cable_buffer_km = args.cable_sea_buffer_km if args.include_cables else 0.0
-    if args.single_query:
-        raw_lines = fetch_power_features_single(
-            country=args.country,
-            boundary=boundary_wgs84,
-            include_minor_lines=args.include_minor_lines,
-            include_cables=args.include_cables,
-            sea_buffer_km=cable_buffer_km,
-            render_crs=args.crs,
-            use_cache=not args.no_cache,
-        )
-    else:
-        raw_lines = fetch_power_features(
-            country=args.country,
-            boundary=boundary_wgs84,
-            include_minor_lines=args.include_minor_lines,
-            include_cables=args.include_cables,
-            tile_size_km=args.tile_size_km,
-            render_crs=args.crs,
-            sea_buffer_km=cable_buffer_km,
-            use_cache=not args.no_cache,
-            tile_delay=args.tile_delay,
-        )
-
     boundary_projected = boundary_wgs84.to_crs(args.crs)
-    lines_projected = prepare_lines(
-        raw_lines, boundary_wgs84, args.crs, cable_sea_buffer_km=cable_buffer_km
-    )
-
-    plants_projected = None
-    if args.show_plants:
-        raw_plants = fetch_power_plants(
-            country=args.country,
-            boundary=boundary_wgs84,
-            tile_size_km=args.tile_size_km,
-            render_crs=args.crs,
-            use_cache=not args.no_cache,
-            tile_delay=args.tile_delay,
-        )
-        plants_projected = prepare_plants(
-            raw_plants, boundary_wgs84, args.crs, min_capacity_mw=args.min_plant_capacity
-        )
-        print(f"Plants after preparation: {len(plants_projected):,}")
+    lines_projected, plants_projected = fetch_lines_and_plants(args, boundary_wgs84)
 
     if args.output:
         fmt = (args.output.suffix.lstrip(".") or args.format[0]).lower()

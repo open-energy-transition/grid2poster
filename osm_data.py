@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable
 
@@ -185,6 +186,30 @@ def get_country_boundary(country: str, mainland_only: bool = True, use_cache: bo
     return boundary
 
 
+@contextmanager
+def _historical_overpass_settings(historical_date: str | None):
+    """Temporarily inject an Overpass ``[date:"..."]`` attic-data filter.
+
+    osmnx builds every query via ``settings.overpass_settings.format(timeout=...,
+    maxsize=...)`` (see ``osmnx._overpass._make_overpass_settings``), so adding
+    the date filter to that template is the only hook available to make
+    ``ox.features_from_polygon`` return point-in-time data instead of current
+    data. Restores the original template on exit so unrelated (current-day)
+    fetches are unaffected.
+    """
+    if not historical_date:
+        yield
+        return
+    original = ox.settings.overpass_settings
+    ox.settings.overpass_settings = (
+        f'[out:json][timeout:{{timeout}}][date:"{historical_date}"]{{maxsize}}'
+    )
+    try:
+        yield
+    finally:
+        ox.settings.overpass_settings = original
+
+
 def _polygon_to_overpass_poly(polygon: Polygon, precision: int = 6) -> str:
     """Convert a Shapely Polygon exterior ring to Overpass poly: coordinate string."""
     parts = []
@@ -228,12 +253,22 @@ def fetch_power_features_single(
     render_crs: str = "EPSG:3857",
     use_cache: bool = True,
     timeout: int = 300,
+    historical_date: str | None = None,
 ) -> gpd.GeoDataFrame:
-    """Fetch all power features in one Overpass query using poly: filter."""
+    """Fetch all power features in one Overpass query using poly: filter.
+
+    ``historical_date`` (ISO 8601, e.g. ``"2020-01-01T00:00:00Z"``) requests
+    attic (point-in-time) data instead of the current OSM state. This path has
+    no retry loop, so prefer the tiled ``fetch_power_features`` for historical
+    queries over large areas, where attic queries are more timeout-prone.
+    """
     import requests as http_requests
 
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_single_v1", country, values, sea_buffer_km)
+    if historical_date:
+        key = cache_key("power_single_historical_v1", country, values, sea_buffer_km, historical_date)
+    else:
+        key = cache_key("power_single_v1", country, values, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -262,8 +297,9 @@ def fetch_power_features_single(
         ps = _polygon_to_overpass_poly(poly)
         way_clauses.append(f'  way["power"~"{power_regex}"](poly:"{ps}");')
 
+    date_clause = f'[date:"{historical_date}"]' if historical_date else ""
     query = (
-        f"[out:json][timeout:{timeout}];\n"
+        f"[out:json][timeout:{timeout}]{date_clause};\n"
         "(\n"
         + "\n".join(way_clauses) + "\n"
         ");\n"
@@ -505,9 +541,20 @@ def fetch_power_features(
     sea_buffer_km: float = 0.0,
     use_cache: bool = True,
     tile_delay: float = 0,
+    historical_date: str | None = None,
 ) -> gpd.GeoDataFrame:
+    """``historical_date`` (ISO 8601, e.g. ``"2020-01-01T00:00:00Z"``) requests
+    attic (point-in-time) data instead of the current OSM state. Attic queries
+    are more timeout-prone on the public Overpass instance than current-data
+    queries; the per-tile retry/backoff below absorbs that.
+    """
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_features", country, values, tile_size_km, render_crs, sea_buffer_km)
+    if historical_date:
+        key = cache_key(
+            "power_features_historical_v1", country, values, tile_size_km, render_crs, sea_buffer_km, historical_date
+        )
+    else:
+        key = cache_key("power_features", country, values, tile_size_km, render_crs, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -526,17 +573,20 @@ def fetch_power_features(
         # Per-tile key so partial progress survives a crash or Overpass outage:
         # geometry WKB folds in tile_size_km / render_crs / sea_buffer_km, since
         # those parameters fully determine the tile polygon.
+        if historical_date:
+            return cache_key("power_tile_historical_v1", country, values, tile_geom.wkb_hex, historical_date)
         return cache_key("power_tile_v1", country, values, tile_geom.wkb_hex)
 
-    frames = _fetch_tiles(
-        tiles,
-        tags={"power": values},
-        tile_cache_key=tile_cache_key,
-        geometry_types=["LineString", "MultiLineString"],
-        keep_cols=_TILE_ID_COLS + _LINE_COLS,
-        use_cache=use_cache,
-        tile_delay=tile_delay,
-    )
+    with _historical_overpass_settings(historical_date):
+        frames = _fetch_tiles(
+            tiles,
+            tags={"power": values},
+            tile_cache_key=tile_cache_key,
+            geometry_types=["LineString", "MultiLineString"],
+            keep_cols=_TILE_ID_COLS + _LINE_COLS,
+            use_cache=use_cache,
+            tile_delay=tile_delay,
+        )
 
     if not frames:
         raise RuntimeError(
@@ -556,16 +606,21 @@ def fetch_power_plants(
     render_crs: str = "EPSG:8857",
     use_cache: bool = True,
     tile_delay: float = 0,
+    historical_date: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Fetch power=plant features inside the boundary, tiled like the lines.
 
     Plants are nodes or areas, so point and polygon geometries are kept. An
     empty result is returned (not raised) when a region has no mapped plants —
-    the overlay simply stays empty.
+    the overlay simply stays empty. ``historical_date`` (ISO 8601) requests
+    attic (point-in-time) data instead of the current OSM state.
     """
     # Distinct cache namespaces ("power_plants_v1"/"power_plant_tile_v1") keep
     # plant tiles from ever colliding with the line tile cache.
-    key = cache_key("power_plants_v1", country, tile_size_km, render_crs)
+    if historical_date:
+        key = cache_key("power_plants_historical_v1", country, tile_size_km, render_crs, historical_date)
+    else:
+        key = cache_key("power_plants_v1", country, tile_size_km, render_crs)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -576,17 +631,20 @@ def fetch_power_plants(
     print(f"Downloading OSM power plants: power=plant across {len(tiles):,} tiles")
 
     def tile_cache_key(tile_geom: Any) -> str:
+        if historical_date:
+            return cache_key("power_plant_tile_historical_v1", country, tile_geom.wkb_hex, historical_date)
         return cache_key("power_plant_tile_v1", country, tile_geom.wkb_hex)
 
-    frames = _fetch_tiles(
-        tiles,
-        tags={"power": "plant"},
-        tile_cache_key=tile_cache_key,
-        geometry_types=["Point", "Polygon", "MultiPolygon"],
-        keep_cols=_TILE_ID_COLS + _PLANT_COLS,
-        use_cache=use_cache,
-        tile_delay=tile_delay,
-    )
+    with _historical_overpass_settings(historical_date):
+        frames = _fetch_tiles(
+            tiles,
+            tags={"power": "plant"},
+            tile_cache_key=tile_cache_key,
+            geometry_types=["Point", "Polygon", "MultiPolygon"],
+            keep_cols=_TILE_ID_COLS + _PLANT_COLS,
+            use_cache=use_cache,
+            tile_delay=tile_delay,
+        )
 
     if not frames:
         # Unlike lines, a region without mapped plants is a valid poster.
