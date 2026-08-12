@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import json
 from pathlib import Path
 from typing import Any, Callable
 
@@ -224,6 +225,7 @@ def fetch_power_features_single(
     boundary: gpd.GeoDataFrame,
     include_minor_lines: bool = False,
     include_cables: bool = False,
+    voltages: list[str] = None,
     sea_buffer_km: float = 0.0,
     render_crs: str = "EPSG:3857",
     use_cache: bool = True,
@@ -233,7 +235,7 @@ def fetch_power_features_single(
     import requests as http_requests
 
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_single_v1", country, values, sea_buffer_km)
+    key = cache_key("power_single_v1", country, values, voltages, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -241,6 +243,11 @@ def fetch_power_features_single(
             return cached
 
     boundary_geom = unary_union(boundary.geometry)
+
+    voltages_clause = ''
+    if voltages is not None:
+        voltages_regex = "(^|;)(" + "|".join(voltages) + ")($|;)"
+        voltages_clause = f'["voltage"~"{voltages_regex}"]'
 
     if sea_buffer_km > 0:
         boundary_proj = boundary.to_crs(render_crs)
@@ -260,7 +267,7 @@ def fetch_power_features_single(
     way_clauses = []
     for poly in polygons:
         ps = _polygon_to_overpass_poly(poly)
-        way_clauses.append(f'  way["power"~"{power_regex}"](poly:"{ps}");')
+        way_clauses.append(f'  way["power"~"{power_regex}"]{voltages_clause}(poly:"{ps}");')
 
     query = (
         f"[out:json][timeout:{timeout}];\n"
@@ -385,6 +392,7 @@ def _fetch_tiles(
     keep_cols: list[str],
     use_cache: bool,
     tile_delay: float,
+    voltages: list[str] = None,
 ) -> list[gpd.GeoDataFrame]:
     """Download ``tags`` features for every tile, returning one frame per tile.
 
@@ -426,6 +434,12 @@ def _fetch_tiles(
 
         features = features.reset_index()
         matching = features[features.geometry.type.isin(geometry_types)]
+
+        if voltages is not None:
+            voltges_regex = "(^|;)(" + "|".join(voltages) + ")($|;)"
+            matching = matching[matching['voltage'].str.contains(voltges_regex, regex=True, na=False)]
+            #Emits uneeded userwarnings we can't remove. See https://github.com/pandas-dev/pandas/issues/56798
+
         if matching.empty:
             cache_set(tile_cache_key(tile_geom), empty_tile)
             return True
@@ -500,6 +514,7 @@ def fetch_power_features(
     boundary: gpd.GeoDataFrame,
     include_minor_lines: bool = False,
     include_cables: bool = False,
+    voltages: list[str] = None,
     tile_size_km: float = 200,
     render_crs: str = "EPSG:8857",
     sea_buffer_km: float = 0.0,
@@ -507,12 +522,14 @@ def fetch_power_features(
     tile_delay: float = 0,
 ) -> gpd.GeoDataFrame:
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_features", country, values, tile_size_km, render_crs, sea_buffer_km)
+    key = cache_key("power_features", country, values, voltages, tile_size_km, render_crs, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
             print(f"Using cached power features for {country}")
             return cached
+
+    tags={"power": values}
 
     tiles = make_query_tiles(
         boundary,
@@ -520,19 +537,20 @@ def fetch_power_features(
         render_crs=render_crs,
         sea_buffer_km=sea_buffer_km,
     )
-    print(f"Downloading OSM power features: power={values} across {len(tiles):,} tiles")
+    print(f"Downloading OSM power features: {json.dumps(tags)} across {len(tiles):,} tiles")
 
     def tile_cache_key(tile_geom: Any) -> str:
         # Per-tile key so partial progress survives a crash or Overpass outage:
         # geometry WKB folds in tile_size_km / render_crs / sea_buffer_km, since
         # those parameters fully determine the tile polygon.
-        return cache_key("power_tile_v1", country, values, tile_geom.wkb_hex)
+        return cache_key("power_tile_v1", country, values, voltages, tile_geom.wkb_hex)
 
     frames = _fetch_tiles(
         tiles,
-        tags={"power": values},
+        tags=tags,
         tile_cache_key=tile_cache_key,
         geometry_types=["LineString", "MultiLineString"],
+        voltages=voltages,
         keep_cols=_TILE_ID_COLS + _LINE_COLS,
         use_cache=use_cache,
         tile_delay=tile_delay,

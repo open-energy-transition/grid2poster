@@ -111,6 +111,13 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
              "(default: 60,150,300,500). Sets how lines are colored/weighted and "
              "the legend labels; tune to the grid being mapped.",
     )
+    parser.add_argument(
+            "--only-voltages",
+            type=lambda s: s.split(","),
+            default=None,
+            dest="voltages_list",
+            help="Coma-separated voltages list in volts to only retreive the corresponding features",
+        )
     parser.add_argument("--include-minor-lines", action="store_true", help="Also fetch power=minor_line")
     parser.add_argument(
         "--include-cables",
@@ -374,6 +381,7 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
             boundary=boundary_wgs84,
             include_minor_lines=args.include_minor_lines,
             include_cables=args.include_cables,
+            voltages=args.voltages_list,
             sea_buffer_km=cable_buffer_km,
             render_crs=args.crs,
             use_cache=not args.no_cache,
@@ -384,6 +392,7 @@ def main(argv: Iterable[str] = sys.argv[1:]) -> int:
             boundary=boundary_wgs84,
             include_minor_lines=args.include_minor_lines,
             include_cables=args.include_cables,
+            voltages=args.voltages_list,
             tile_size_km=args.tile_size_km,
             render_crs=args.crs,
             sea_buffer_km=cable_buffer_km,
