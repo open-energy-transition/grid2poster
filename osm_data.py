@@ -150,8 +150,19 @@ def load_boundary_from_geojson(
     return gpd.GeoDataFrame({"name": [name]}, geometry=[merged], crs="EPSG:4326")
 
 
+def _cache_name(country: str) -> str:
+    """Normalize a region name so it identifies one cache entry.
+
+    The name arrives straight from --country, so "Germany", "germany" and
+    "  Germany " hash to three different keys and each one re-downloads every
+    tile from scratch. Folding case and surrounding whitespace lets the
+    spellings share a single cached download.
+    """
+    return " ".join(country.split()).lower()
+
+
 def get_country_boundary(country: str, mainland_only: bool = True, use_cache: bool = True) -> gpd.GeoDataFrame:
-    key = cache_key("boundary_v3", country, mainland_only)
+    key = cache_key("boundary_v3", _cache_name(country), mainland_only)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -233,7 +244,7 @@ def fetch_power_features_single(
     import requests as http_requests
 
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_single_v1", country, values, sea_buffer_km)
+    key = cache_key("power_single_v1", _cache_name(country), values, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -507,7 +518,7 @@ def fetch_power_features(
     tile_delay: float = 0,
 ) -> gpd.GeoDataFrame:
     values = power_tag_values(include_minor_lines, include_cables)
-    key = cache_key("power_features", country, values, tile_size_km, render_crs, sea_buffer_km)
+    key = cache_key("power_features", _cache_name(country), values, tile_size_km, render_crs, sea_buffer_km)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -526,7 +537,7 @@ def fetch_power_features(
         # Per-tile key so partial progress survives a crash or Overpass outage:
         # geometry WKB folds in tile_size_km / render_crs / sea_buffer_km, since
         # those parameters fully determine the tile polygon.
-        return cache_key("power_tile_v1", country, values, tile_geom.wkb_hex)
+        return cache_key("power_tile_v1", _cache_name(country), values, tile_geom.wkb_hex)
 
     frames = _fetch_tiles(
         tiles,
@@ -565,7 +576,7 @@ def fetch_power_plants(
     """
     # Distinct cache namespaces ("power_plants_v1"/"power_plant_tile_v1") keep
     # plant tiles from ever colliding with the line tile cache.
-    key = cache_key("power_plants_v1", country, tile_size_km, render_crs)
+    key = cache_key("power_plants_v1", _cache_name(country), tile_size_km, render_crs)
     if use_cache:
         cached = cache_get(key)
         if cached is not None:
@@ -576,7 +587,7 @@ def fetch_power_plants(
     print(f"Downloading OSM power plants: power=plant across {len(tiles):,} tiles")
 
     def tile_cache_key(tile_geom: Any) -> str:
-        return cache_key("power_plant_tile_v1", country, tile_geom.wkb_hex)
+        return cache_key("power_plant_tile_v1", _cache_name(country), tile_geom.wkb_hex)
 
     frames = _fetch_tiles(
         tiles,
