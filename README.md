@@ -36,13 +36,47 @@ Preprinted posters in various styles and A3 are available for most regions of th
 
 ## Installation
 
+Grid2Poster requires Python 3.10 or newer and installs a `grid2poster` command.
+
 The project lives in two branches: the main branch and the gh-pages branch. To create your own posters, clone the main branch with the --single-branch flag, as the gh-pages branch contains all the gallery plots and is therefore massive.
+
+With [uv](https://docs.astral.sh/uv/) (recommended - it reads the checked-in `uv.lock` and gives everyone the exact same dependency versions):
 ```bash
-git clone --single-branch https://github.com/open-energy-transition/grid2poster 
+git clone --single-branch https://github.com/open-energy-transition/grid2poster
+cd grid2poster
+uv sync
+uv run grid2poster --list-themes
+```
+
+With pip:
+```bash
+git clone --single-branch https://github.com/open-energy-transition/grid2poster
+cd grid2poster
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
+grid2poster --list-themes
 ```
+
+To use it outside a checkout, install straight from the repository - the themes and predefined regions ship inside the package, so the command works from any directory:
+```bash
+uv tool install git+https://github.com/open-energy-transition/grid2poster    # or: pip install git+...
+```
+
+All examples below are written as `grid2poster ...`. Inside a `uv` checkout, prefix them with `uv run` (`uv run grid2poster ...`) or activate the environment first. `python -m grid2poster` works as an alternative to the `grid2poster` command.
+
+### Upgrading from `create_grid_poster.py`
+
+Older commands keep working unchanged. `python create_grid_poster.py ...` still runs from a checkout (it forwards to the package and prints a deprecation note on stderr), every option keeps its name and default, and the two argparse-only syntaxes are still accepted:
+
+```bash
+grid2poster --country Brazil --format png svg       # same as --format png,svg
+grid2poster --country Brazil --export-geojson       # bare flag: writes next to the poster
+grid2poster --country Brazil --export-geojson out.geojson   # same as --export-geojson-path
+grid2poster --country Europe --boundary-geojson ./regions/europe.geojson   # resolves to the bundled region
+```
+
+The one behavior that could not be carried over is argparse's automatic abbreviation of long options (`--coun Brazil` for `--country`); spell options out in full.
 
 ## Usage
 
@@ -50,27 +84,30 @@ To create a poster for a country, state or province, use the --country option to
 
 By default posters print at **A3 portrait (297 × 420 mm) at 300 DPI**. Use `--paper-size` for another named preset, `--width`/`--height` for custom millimeter dimensions, and `--landscape` to flip orientation.
 ```bash
-python create_grid_poster.py --country Brazil --tile-delay 30 --tile-size-km 500
+grid2poster --country Brazil --tile-delay 30 --tile-size-km 500
 ```
 Depending on the size of the country and whether distribution grids are excluded, loading the data via a single query (--single-query) is much faster. For large countries with lots of distribution grids, the data should be loaded in multiple tiles:
 ```bash
-python create_grid_poster.py --country Pakistan --single-query
+grid2poster --country Pakistan --single-query
 ```
 
 Include distribution grids if available. Grid coverage varies significantly across the globe and is mainly only available in Europe and North America.
 ```bash
-python create_grid_poster.py --country Germany --include-minor-lines
+grid2poster --country Germany --include-minor-lines
 ```
 
-List available themes. Create a new theme JSON file in the 'themes' directory to find your own style.
+List available themes and predefined regions. Both ship inside the package, so they are available from any directory:
 ```bash
-python create_grid_poster.py --list-themes
+grid2poster --list-themes
+grid2poster --list-regions
 ```
+
+The shipped files live at `src/grid2poster/data/themes/` and `src/grid2poster/data/regions/` in a checkout. To design your own style without touching the package, drop a theme JSON into a `themes/` directory in the directory you run from: a local `themes/` takes precedence over the bundled set, so you can add themes or override shipped ones. A local `regions/` directory works the same way.
 
 Once a region's data has been loaded, re-rendering it with another theme is much faster: the boundaries and OSM power features are served from the cache instead of being downloaded again. This makes it cheap to experiment with different styles for the same country.
 ```bash
-python create_grid_poster.py --country Brazil --theme neon_cyberpunk
-python create_grid_poster.py --country Brazil --theme paper_grid     # reuses the cached data
+grid2poster --country Brazil --theme neon_cyberpunk
+grid2poster --country Brazil --theme paper_grid     # reuses the cached data
 ```
 
 A theme JSON defines colors per voltage tier (`line_unknown`, `line_low`, `line_mid`, `line_high`, `line_extra`). It may optionally also set the line thickness (in points) per tier with `lw_unknown`, `lw_low`, `lw_mid`, `lw_high`, `lw_extra`, and `lw_minor`. Any width key you omit falls back to the built-in default for that tier.
@@ -79,12 +116,12 @@ Cables (`--include-cables`, underground/submarine) inherit their voltage-tier co
 
 Power plants (`--show-plants`) are drawn as markers sized by installed capacity (`plant:output:electricity`, square-root area scaling) and colored by generation source (`plant:source`), bucketed into solar, wind, hydro, nuclear, coal, gas, oil, biomass and other. Marker colors are derived automatically from each theme's palette so they fit the poster style; a theme may pin any bucket explicitly with `plant_solar`, `plant_wind`, `plant_hydro`, `plant_nuclear`, `plant_coal`, `plant_gas`, `plant_oil`, `plant_biomass`, `plant_other`, and override the marker outline with `plant_edge`. A second metadata row lists the installed GW per source. Use `--min-plant-capacity` to hide small plants and `--plant-marker-scale` to tune marker sizes.
 ```bash
-python create_grid_poster.py --country Austria --show-plants --min-plant-capacity 10
+grid2poster --country Austria --show-plants --min-plant-capacity 10
 ```
 
-Use a local GeoJSON file as the boundary instead of geocoding (handy for custom regions or sub-national areas). All polygonal features in the file are dissolved into a single boundary. The `--country` value is still used for the poster title and output filename. `--landscape` will render in landscape (horizontal) orientation.
+Use a GeoJSON boundary instead of geocoding (handy for custom regions or sub-national areas). `--boundary-geojson` accepts either a path to your own file or the bare name of a predefined region (`grid2poster --list-regions`). All polygonal features in the file are dissolved into a single boundary. The `--country` value is still used for the poster title and output filename. `--landscape` will render in landscape (horizontal) orientation.
 ```bash
-python create_grid_poster.py --country "Middle East and North Africa" --boundary-geojson ./regions/mena.geojson --landscape --theme neon_cyberpunk 
+grid2poster --country "Middle East and North Africa" --boundary-geojson mena --landscape --theme neon_cyberpunk 
 ```
 
 ![](./posters/middle_east_and_north_africa_grid_neon_cyberpunk_20260518_001957.png)
@@ -92,7 +129,7 @@ python create_grid_poster.py --country "Middle East and North Africa" --boundary
 Render an entire continent. Continent boundaries come from the Natural Earth admin-0 dataset (downloaded and cached on first use) because Nominatim does not resolve continent names. Accepted values are `Africa`, `Antarctica`, `Asia`, `Europe`, `North America`, `Oceania`, and `South America`. The aggregate name `Global` combines every inhabited continent.
 
 ```bash
-python create_grid_poster.py --country Africa --tile-size-km 500
+grid2poster --country Africa --tile-size-km 500
 ```
 
 Continent-scale runs hit the Overpass API hundreds of times and can take several hours. A larger `--tile-size-km` cuts the number of queries; pick a value that still stays under the Overpass per-query size limit.
@@ -102,7 +139,7 @@ Continent-scale runs hit the Overpass API hundreds of times and can take several
 `--country Global` renders the whole inhabited world as the union of the continents, clipped to a tight bounding box so it fills the page. It is the longest job in the tool (many hundreds of Overpass queries, several hours), so use a large `--tile-size-km`, a generous `--tile-delay`, and high `--voltage-tiers` so HV/EHV lines stand out at world scale. The `themes/` directory ships three palettes tuned for this scale: `global_grid_atlas` (dark atlas), `global_grid_atlas_neon` (neon), and `global_paper_grid_atlas` (warm paper).
 
 ```bash
-python create_grid_poster.py --country Global \
+grid2poster --country Global \
   --display-country "The Global Electrical Transmission Grid" --subtitle "Electrify Everything" \
   --theme global_grid_atlas_neon --landscape --paper-size a0 \
   --tile-size-km 1000 --tile-delay 30 --voltage-tiers 110,220,400,765 --padding -0.1
@@ -114,7 +151,7 @@ python create_grid_poster.py --country Global \
 
 If the default Overpass endpoint (`overpass-api.de`) is rate-limiting or refusing connections, switch to a mirror with `--overpass-endpoint`:
 ```bash
-python create_grid_poster.py --country Germany --overpass-endpoint https://overpass.kumi.systems/api/interpreter
+grid2poster --country Germany --overpass-endpoint https://overpass.kumi.systems/api/interpreter
 ```
 Other public mirrors include `https://overpass.private.coffee/api/interpreter`.
 
@@ -123,14 +160,14 @@ Other public mirrors include `https://overpass.private.coffee/api/interpreter`.
 Most options can be combined in a single run. The command below renders the continental European grid in the `monochrome_density` theme, pulling in distribution (`--include-minor-lines`) and underground/submarine (`--include-cables`) infrastructure, and tuning the framing and download behaviour:
 
 ```bash
-python3 create_grid_poster.py --country "Europe" --boundary-geojson ./regions/europe.geojson \
+grid2poster --country "Europe" --boundary-geojson europe \
   --tile-size-km 800 --include-cables --include-minor-lines --theme monochrome_density \
   --tile-delay 30 --landscape --shift-y 0.18 --padding -0.35 --no-cache --cable-sea-buffer-km 500
 ```
 
 What each flag contributes:
 
-- `--boundary-geojson ./regions/europe.geojson` - use the predefined 37-unit Europe boundary instead of geocoding.
+- `--boundary-geojson europe` - use the predefined 37-unit Europe boundary instead of geocoding.
 - `--tile-size-km 800` with `--tile-delay 30` - fewer, larger Overpass tiles spaced 30 s apart to stay under per-query limits without tripping rate limits.
 - `--include-minor-lines` / `--include-cables` - add `power=minor_line` and `power=cable` features on top of the transmission lines.
 - `--cable-sea-buffer-km 500` - inflate the boundary 500 km over water so long submarine cables survive coastline clipping.
@@ -148,14 +185,15 @@ What each flag contributes:
 | Option | Default | Description |
 | --- | --- | --- |
 | `--country` | - | Country or region name resolvable by Nominatim, a continent name (`Africa`, `Antarctica`, `Asia`, `Europe`, `North America`, `Oceania`, `South America`), or the aggregate `Global`  |
-| `--boundary-geojson` | - | Path to a local GeoJSON file with polygonal boundary features. Overrides the Nominatim/Natural Earth lookup. Useful for custom regions, sub-national areas, or offline workflows. |
+| `--boundary-geojson` | - | Path to a GeoJSON file with polygonal boundary features, or the name of a predefined region (see `--list-regions`). Overrides the Nominatim/Natural Earth lookup. Useful for custom regions, sub-national areas, or offline workflows. |
 | `--display-country` | value of `--country` | Text to print on the poster. Useful when the geocoder name differs from the desired title. |
 | `--subtitle` | `ELECTRICAL TRANSMISSION GRID` (or `ELECTRICAL GRID` with `--include-minor-lines`) | Override the subtitle printed under the country/region name. |
 | `--padding` | `0.10` | Fractional padding around the boundary bounds. Lower values zoom in (`0` = tight fit, `-0.05` = crop slightly into the bounds); higher values pull the view out. |
 | `--shift-x` | `0.0` | Shift the grid data horizontally on the poster, as a fraction of the data extent. Positive values shift right, negative shift left (e.g. `0.1` = shift 10% right). |
 | `--shift-y` | `0.0` | Shift the grid data vertically on the poster, as a fraction of the data extent. Positive values shift up, negative shift down (e.g. `0.1` = shift 10% up). |
-| `--theme` | `paper_grid` | Theme ID from the `themes/` directory. |
+| `--theme` | `paper_grid` | Theme ID from the bundled themes, or from a `themes/` directory in the working directory. |
 | `--list-themes` | - | List available themes and exit. |
+| `--list-regions` | - | List the predefined region boundaries and exit. |
 | `--voltage-tiers` | `60,150,300,500` | Lower kV bounds for the four voltage tiers (low, mid, high, extra), comma-separated. Controls how lines are colored/weighted and the legend labels - tune to the grid being mapped (e.g. `60,220,400,765`). |
 | `--include-minor-lines` | off | Also fetch `power=minor_line` features. |
 | `--include-cables` / `--no-include-cables` | off | Fetch `power=cable` features (underground/submarine). Off by default; pass `--include-cables` to enable. |
@@ -172,7 +210,7 @@ What each flag contributes:
 | `--title-size` | auto | Title font size in points. Auto-scaled from poster size by default; set to override. |
 | `--tile-size-km` | `400` | Overpass query tile size in kilometers. Use smaller values for very large countries or busy servers. |
 | `--overpass-endpoint` | OSMnx default (`overpass-api.de`) | Override the Overpass API URL. Use a mirror (e.g. `https://overpass.kumi.systems/api/interpreter`) when the default is rate-limiting or unreachable. |
-| `--format` | `png svg` | Output format(s): any combination of `png`, `svg`, `pdf`. Multiple values are written in one run. |
+| `--format` | `png,svg` | Output format(s): any combination of `png`, `svg`, `pdf`. Comma-separate (`-f png,pdf`), repeat the flag (`-f png -f pdf`), or space-separate (`-f png pdf`) to write several formats in one run. |
 | `--output` | auto-generated in `posters/` | Output file path. When set, only a single file is written and its format is inferred from the extension. |
 | `--crs` | `EPSG:3857` | Projection used for rendering. EPSG:3857 (Pseudo-Mercator) works well for country posters. |
 | `--hide-metadata` | off | Do not print segment counts on the poster. |
@@ -183,7 +221,8 @@ What each flag contributes:
 | `--logo-alpha` | `1.0` | Logo opacity, from `0` (transparent) to `1` (fully opaque). |
 | `--single-query` | off | Fetch all power features in a single Overpass query instead of tiling. Faster for small/medium regions but may time out on large countries or continents. |
 | `--tile-delay` | `30` | Seconds to wait between Overpass tile API requests. Useful to avoid rate-limiting on busy public endpoints. |
-| `--export-geojson` | off | Also save all transmission lines as a single GeoJSON in WGS84 (EPSG:4326). Pass a path to override the default location in `posters/`. |
+| `--export-geojson` | off | Also save all transmission lines as a single GeoJSON in WGS84 (EPSG:4326), written to `posters/`. Passing a path directly (`--export-geojson out.geojson`) still works and is equivalent to `--export-geojson-path`. |
+| `--export-geojson-path` | - | Write the GeoJSON export to this path instead (implies `--export-geojson`). |
 | `--no-cache` | off | Ignore cached boundaries and OSM power features on this run. Fresh results are still written to the cache for future runs. |
 | `--verbose-osmnx` | off | Print OSMnx request logs. |
 
@@ -210,45 +249,45 @@ Generated posters are written to the `posters/` directory by default. Intermedia
 
 ### Predefined regions
 
-The `regions/` directory ships with multi-country boundaries that map to common power-system groupings. Pass any of them via `--boundary-geojson` and set `--country` to the title you want printed on the poster:
+Grid2Poster ships with multi-country boundaries that map to common power-system groupings (`grid2poster --list-regions`). Pass any of them to `--boundary-geojson` by name, and set `--country` to the title you want printed on the poster:
 
 ```bash
-python create_grid_poster.py --country "Europe" --boundary-geojson ./regions/europe.geojson --tile-size-km 300
+grid2poster --country "Europe" --boundary-geojson europe --tile-size-km 300
 ```
 
-| File | Coverage |
+| Region | Coverage |
 | --- | --- |
-| `regions/australia_mainland_tasmania.geojson` | Australia: mainland and Tasmania; outlying territories excluded. |
-| `regions/britain_and_ireland.geojson` | Great Britain (excl. Shetland) and the island of Ireland. |
-| `regions/canada_southern_provinces.geojson` | Canada south of 60°N; excludes Yukon, NWT, Nunavut. |
-| `regions/central_asia.geojson` | Kazakhstan, Kyrgyzstan, Tajikistan, Turkmenistan, Uzbekistan. |
-| `regions/chile_to_quellon.geojson` | Chile from the northern border south to Quellón on Chiloé Island; excludes Patagonia south of Chiloé and the remote Pacific islands (Easter Island, Juan Fernández). |
-| `regions/continental_europe.geojson` | Continental Europe Synchronous Area (ENTSO-E Regional Group) approximation - ~26 countries from Albania to Ukraine. Approximate country-boundary geometry, not a TSO/control-area dataset. |
-| `regions/east_africa.geojson` | 11 East African countries from Eritrea/Djibouti south to Tanzania. |
-| `regions/eastern_interconnection.geojson` | Eastern Interconnection (approximate mask): central Canada to the Atlantic coast excluding Quebec, south to Florida, west to the Rockies. Hand-generalized, not an exact grid boundary. |
-| `regions/europe.geojson` | 37 European units including UK, Ireland, Nordics, Turkey, Ukraine, Belarus, and the Crimea peninsula; excludes Russia. Crimea geometry comes from the Natural Earth Russia feature but is included here per Ukraine. |
-| `regions/great_lakes.geojson` | Great Lakes region straddling the US Midwest and Ontario. |
-| `regions/iberia.geojson` | Spain and Portugal. |
-| `regions/ireland_island.geojson` | Island of Ireland (Republic of Ireland + Northern Ireland). |
-| `regions/japan_main_islands.geojson` | Japan's four main islands plus adjacent small islands; excludes Okinawa, Ogasawara, Senkaku. |
-| `regions/java_bali.geojson` | Indonesian islands of Java and Bali. |
-| `regions/latin_america_and_the_caribbean.geojson` | 48 entries from Mexico through Argentina, including the Caribbean and overseas territories. |
-| `regions/malay_peninsula.geojson` | Malay Peninsula: Peninsular Malaysia, Singapore, and southern Thailand. |
-| `regions/mediterranean.geojson` | 22 countries bordering the Mediterranean. |
-| `regions/mena.geojson` | Middle East and North Africa - 18 countries. |
-| `regions/middle_america.geojson` | Middle America - 35 entries: Mexico, Central America, and the Caribbean islands and territories. |
-| `regions/quebec_south.geojson` | Southern Quebec, Canada. |
-| `regions/salish_sea.geojson` | Salish Sea region: southwestern British Columbia and northwestern Washington. |
-| `regions/scandinavia.geojson` | Denmark, Finland, Norway, Sweden. |
-| `regions/south_africa_no_prince_edward.geojson` | South Africa mainland; excludes Prince Edward Islands. |
-| `regions/south_asia.geojson` | India, Pakistan, Bangladesh, Nepal, Bhutan, Sri Lanka. |
-| `regions/southeast_asia.geojson` | 11 Southeast Asian countries (Brunei through Vietnam). |
-| `regions/southern_african_power_pool.geojson` | Southern African Power Pool - 12 member countries (Angola, Botswana, DRC, Eswatini, Lesotho, Malawi, Mozambique, Namibia, South Africa, Tanzania, Zambia, Zimbabwe). |
-| `regions/uk_no_shetland.geojson` | United Kingdom without the Shetland Islands. |
-| `regions/us_canada_mainland.geojson` | Continental US and Canadian mainland south of 60°N; excludes Alaska, Hawaii, Arctic islands. |
-| `regions/us_mainland.geojson` | Contiguous United States (CONUS); excludes Alaska and Hawaii. |
-| `regions/wapp.geojson` | West African Power Pool - 14 member countries. |
-| `regions/wecc.geojson` | Western Electricity Coordinating Council / Western Interconnection footprint across western North America. |
+| `australia_mainland_tasmania` | Australia: mainland and Tasmania; outlying territories excluded. |
+| `britain_and_ireland` | Great Britain (excl. Shetland) and the island of Ireland. |
+| `canada_southern_provinces` | Canada south of 60°N; excludes Yukon, NWT, Nunavut. |
+| `central_asia` | Kazakhstan, Kyrgyzstan, Tajikistan, Turkmenistan, Uzbekistan. |
+| `chile_to_quellon` | Chile from the northern border south to Quellón on Chiloé Island; excludes Patagonia south of Chiloé and the remote Pacific islands (Easter Island, Juan Fernández). |
+| `continental_europe` | Continental Europe Synchronous Area (ENTSO-E Regional Group) approximation - ~26 countries from Albania to Ukraine. Approximate country-boundary geometry, not a TSO/control-area dataset. |
+| `east_africa` | 11 East African countries from Eritrea/Djibouti south to Tanzania. |
+| `eastern_interconnection` | Eastern Interconnection (approximate mask): central Canada to the Atlantic coast excluding Quebec, south to Florida, west to the Rockies. Hand-generalized, not an exact grid boundary. |
+| `europe` | 37 European units including UK, Ireland, Nordics, Turkey, Ukraine, Belarus, and the Crimea peninsula; excludes Russia. Crimea geometry comes from the Natural Earth Russia feature but is included here per Ukraine. |
+| `great_lakes` | Great Lakes region straddling the US Midwest and Ontario. |
+| `iberia` | Spain and Portugal. |
+| `ireland_island` | Island of Ireland (Republic of Ireland + Northern Ireland). |
+| `japan_main_islands` | Japan's four main islands plus adjacent small islands; excludes Okinawa, Ogasawara, Senkaku. |
+| `java_bali` | Indonesian islands of Java and Bali. |
+| `latin_america_and_the_caribbean` | 48 entries from Mexico through Argentina, including the Caribbean and overseas territories. |
+| `malay_peninsula` | Malay Peninsula: Peninsular Malaysia, Singapore, and southern Thailand. |
+| `mediterranean` | 22 countries bordering the Mediterranean. |
+| `mena` | Middle East and North Africa - 18 countries. |
+| `middle_america` | Middle America - 35 entries: Mexico, Central America, and the Caribbean islands and territories. |
+| `quebec_south` | Southern Quebec, Canada. |
+| `salish_sea` | Salish Sea region: southwestern British Columbia and northwestern Washington. |
+| `scandinavia` | Denmark, Finland, Norway, Sweden. |
+| `south_africa_no_prince_edward` | South Africa mainland; excludes Prince Edward Islands. |
+| `south_asia` | India, Pakistan, Bangladesh, Nepal, Bhutan, Sri Lanka. |
+| `southeast_asia` | 11 Southeast Asian countries (Brunei through Vietnam). |
+| `southern_african_power_pool` | Southern African Power Pool - 12 member countries (Angola, Botswana, DRC, Eswatini, Lesotho, Malawi, Mozambique, Namibia, South Africa, Tanzania, Zambia, Zimbabwe). |
+| `uk_no_shetland` | United Kingdom without the Shetland Islands. |
+| `us_canada_mainland` | Continental US and Canadian mainland south of 60°N; excludes Alaska, Hawaii, Arctic islands. |
+| `us_mainland` | Contiguous United States (CONUS); excludes Alaska and Hawaii. |
+| `wapp` | West African Power Pool - 14 member countries. |
+| `wecc` | Western Electricity Coordinating Council / Western Interconnection footprint across western North America. |
 
 For ad-hoc areas (a single state, a metro region, a custom polygon), supply your own GeoJSON via `--boundary-geojson`. All polygonal features in the file are dissolved into one boundary.
 
@@ -262,9 +301,9 @@ git fetch origin gh-pages
 
 To add a poster:
 
-1. Render it from `main` with `create_grid_poster.py`. 
+1. Render it from `main` with the `grid2poster` CLI. 
    ```bash
-   python create_grid_poster.py --country Spain --theme paper_grid
+   grid2poster --country Spain --theme paper_grid
    ```
 2. Move the PNG (and SVG, if you want to offer the vector download) out of `posters/` so it survives the branch switch, then switch to `gh-pages`:
    ```bash
@@ -279,6 +318,28 @@ To add a poster:
    git commit -m "Add Spain (paper_grid)"
    ```
 4. Open a pull request targeting `gh-pages` (not `main`).
+
+## Development
+
+The package lives under `src/grid2poster/`:
+
+| Module | Responsibility |
+| --- | --- |
+| `cli.py` | Typer command line interface - the `grid2poster` entry point, plus the legacy-argv shim |
+| `common.py` | Shared constants, the on-disk cache, bundled-data lookup |
+| `osm_data.py` | Boundary resolution and Overpass downloads |
+| `prepare.py` | OSM tag parsing and geometry preparation |
+| `theming.py` | Themes and per-feature styling |
+| `render.py` | Poster composition and file output |
+| `data/themes`, `data/regions` | Bundled theme JSONs and region boundaries |
+
+Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`. Linting and formatting use [ruff](https://docs.astral.sh/ruff/), configured in `pyproject.toml`:
+
+```bash
+uv sync                 # install the project plus the dev dependency group
+uv run ruff check .     # lint
+uv run ruff format .    # format
+```
 
 ## Attribution
 

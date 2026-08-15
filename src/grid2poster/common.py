@@ -7,12 +7,14 @@ import json
 import pickle
 import re
 import unicodedata
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
 try:
     from tqdm.auto import tqdm
 except ImportError:  # pragma: no cover - optional progress-bar dependency
+
     class tqdm:  # no-op stand-in supporting both iteration and manual updates
         def __init__(self, iterable=None, *args, **kwargs):
             self._iterable = iterable
@@ -32,9 +34,9 @@ except ImportError:  # pragma: no cover - optional progress-bar dependency
         def __exit__(self, *exc):
             return False
 
+
 CACHE_DIR = Path("cache")
 POSTERS_DIR = Path("posters")
-THEMES_DIR = Path("themes")
 FILE_ENCODING = "utf-8"
 MM_PER_INCH = 25.4
 
@@ -57,9 +59,18 @@ PAPER_SIZES: dict[str, tuple[float, float]] = {
 # as unknown/sub-transmission. Overridable per-run via --voltage-tiers.
 DEFAULT_VOLTAGE_TIERS: tuple[float, float, float, float] = (60.0, 150.0, 300.0, 500.0)
 
-CACHE_DIR.mkdir(exist_ok=True)
-POSTERS_DIR.mkdir(exist_ok=True)
-THEMES_DIR.mkdir(exist_ok=True)
+
+def data_dir(name: str) -> Path:
+    """Locate a bundled data directory (``themes``/``regions``).
+
+    A same-named directory in the current working directory wins, so a checkout
+    of this repository - or any project keeping its own ``themes/`` next to the
+    posters it renders - overrides what ships inside the package.
+    """
+    local = Path.cwd() / name
+    if local.is_dir():
+        return local
+    return Path(str(resources.files(__package__) / "data" / name))
 
 
 def slugify(value: str) -> str:
@@ -73,6 +84,12 @@ def cache_key(*parts: Any) -> str:
     return hashlib.sha256(raw).hexdigest()[:24]
 
 
+def ensure_cache_dir() -> Path:
+    """Create the on-disk cache directory on first use rather than at import."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    return CACHE_DIR
+
+
 def cache_get(key: str) -> Any | None:
     path = CACHE_DIR / f"{key}.pkl"
     if not path.exists():
@@ -82,6 +99,6 @@ def cache_get(key: str) -> Any | None:
 
 
 def cache_set(key: str, value: Any) -> None:
-    path = CACHE_DIR / f"{key}.pkl"
+    path = ensure_cache_dir() / f"{key}.pkl"
     with path.open("wb") as handle:
         pickle.dump(value, handle, protocol=pickle.HIGHEST_PROTOCOL)
