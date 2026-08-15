@@ -5,59 +5,20 @@ from __future__ import annotations
 import colorsys
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import geopandas as gpd
 import matplotlib.colors as mcolors
 import numpy as np
 
-from common import DEFAULT_VOLTAGE_TIERS, FILE_ENCODING, THEMES_DIR
-from prepare import PLANT_SOURCE_BUCKETS
+from .common import DEFAULT_VOLTAGE_TIERS, FILE_ENCODING, data_dir
+from .prepare import PLANT_SOURCE_BUCKETS
 
-DEFAULT_THEMES: dict[str, dict[str, str]] = {
-    "electric_midnight": {
-        "name": "Electric Midnight",
-        "description": "Deep navy background with cool transmission glow.",
-        "bg": "#06111F",
-        "text": "#EAF4FF",
-        "subtext": "#8FB7D8",
-        "boundary": "#1D3C5A",
-        "line_unknown": "#355B7C",
-        "line_low": "#6FA4C8",
-        "line_mid": "#A7D8FF",
-        "line_high": "#F6E7A7",
-        "line_extra": "#FFFFFF",
-        "fade": "#06111F",
-    },
-    "paper_grid": {
-        "name": "Paper Grid",
-        "description": "Warm gallery-print styling for dense networks.",
-        "bg": "#F4EFE6",
-        "text": "#1D1D1D",
-        "subtext": "#6B625A",
-        "boundary": "#D9CCBA",
-        "line_unknown": "#CAB99D",
-        "line_low": "#7F9A8B",
-        "line_mid": "#436F75",
-        "line_high": "#A65C2E",
-        "line_extra": "#5B2016",
-        "fade": "#F4EFE6",
-    },
-    "blackout": {
-        "name": "Blackout",
-        "description": "High-contrast black-and-white technical poster.",
-        "bg": "#050505",
-        "text": "#FFFFFF",
-        "subtext": "#A5A5A5",
-        "boundary": "#252525",
-        "line_unknown": "#454545",
-        "line_low": "#888888",
-        "line_mid": "#D8D8D8",
-        "line_high": "#FFFFFF",
-        "line_extra": "#FFFFFF",
-        "fade": "#050505",
-    },
-}
+
+def themes_dir() -> Path:
+    """Directory themes are read from - a local ``themes/`` wins over the bundled set."""
+    return data_dir("themes")
 
 
 @dataclass(frozen=True)
@@ -105,7 +66,7 @@ class Theme:
     plant_edge: str | None = None
 
     @classmethod
-    def from_dict(cls, raw: dict[str, Any]) -> "Theme":
+    def from_dict(cls, raw: dict[str, Any]) -> Theme:
         required = {
             "name",
             "description",
@@ -126,7 +87,15 @@ class Theme:
         kwargs: dict[str, Any] = {key: raw[key] for key in required}
         # Per-tier line widths and cable width scale are optional; fall back to
         # the dataclass defaults.
-        for key in ("lw_unknown", "lw_low", "lw_mid", "lw_high", "lw_extra", "lw_minor", "cable_lw_scale"):
+        for key in (
+            "lw_unknown",
+            "lw_low",
+            "lw_mid",
+            "lw_high",
+            "lw_extra",
+            "lw_minor",
+            "cable_lw_scale",
+        ):
             if key in raw:
                 kwargs[key] = float(raw[key])
         if "cable_color" in raw:
@@ -150,18 +119,9 @@ class Theme:
         return cls(**kwargs)
 
 
-def ensure_builtin_themes() -> None:
-    """Write bundled themes to disk only when they do not already exist."""
-    for theme_id, data in DEFAULT_THEMES.items():
-        path = THEMES_DIR / f"{theme_id}.json"
-        if not path.exists():
-            path.write_text(json.dumps(data, indent=2), encoding=FILE_ENCODING)
-
-
 def list_themes() -> None:
-    ensure_builtin_themes()
     print("Available themes:\n")
-    for path in sorted(THEMES_DIR.glob("*.json")):
+    for path in sorted(themes_dir().glob("*.json")):
         try:
             data = json.loads(path.read_text(encoding=FILE_ENCODING))
         except json.JSONDecodeError:
@@ -173,10 +133,10 @@ def list_themes() -> None:
 
 
 def load_theme(theme_id: str) -> Theme:
-    ensure_builtin_themes()
-    path = THEMES_DIR / f"{theme_id}.json"
+    directory = themes_dir()
+    path = directory / f"{theme_id}.json"
     if not path.exists():
-        raise FileNotFoundError(f"Theme '{theme_id}' not found in {THEMES_DIR}/")
+        raise FileNotFoundError(f"Theme '{theme_id}' not found in {directory}/")
     return Theme.from_dict(json.loads(path.read_text(encoding=FILE_ENCODING)))
 
 
@@ -207,7 +167,13 @@ def derive_plant_colors(theme: Theme) -> dict[str, str]:
     """
     line_hls = [
         colorsys.rgb_to_hls(*mcolors.to_rgb(color))
-        for color in (theme.line_unknown, theme.line_low, theme.line_mid, theme.line_high, theme.line_extra)
+        for color in (
+            theme.line_unknown,
+            theme.line_low,
+            theme.line_mid,
+            theme.line_high,
+            theme.line_extra,
+        )
     ]
     mean_l = float(np.mean([hls[1] for hls in line_hls]))
     mean_s = float(np.mean([hls[2] for hls in line_hls]))
@@ -226,9 +192,9 @@ def derive_plant_colors(theme: Theme) -> dict[str, str]:
             colors[bucket] = override
             continue
         hue, s_mult, l_mult = _PLANT_HUE_TABLE[bucket]
-        s = float(np.clip(base_s * s_mult, 0.0, 1.0))
-        l = float(np.clip(base_l * l_mult, 0.08, 0.92))
-        colors[bucket] = mcolors.to_hex(colorsys.hls_to_rgb(hue / 360.0, l, s))
+        saturation = float(np.clip(base_s * s_mult, 0.0, 1.0))
+        lightness = float(np.clip(base_l * l_mult, 0.08, 0.92))
+        colors[bucket] = mcolors.to_hex(colorsys.hls_to_rgb(hue / 360.0, lightness, saturation))
     return colors
 
 

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
@@ -13,7 +14,7 @@ import pandas as pd
 from shapely.geometry import LineString, MultiPolygon, Polygon, box
 from shapely.ops import unary_union
 
-from common import CACHE_DIR, cache_get, cache_key, cache_set
+from .common import CACHE_DIR, cache_get, cache_key, cache_set, ensure_cache_dir
 
 NATURAL_EARTH_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/"
@@ -40,6 +41,7 @@ def _load_natural_earth_countries() -> gpd.GeoDataFrame:
     if not NATURAL_EARTH_PATH.exists():
         import urllib.request
 
+        ensure_cache_dir()
         print(f"Downloading Natural Earth admin-0 dataset → {NATURAL_EARTH_PATH}")
         urllib.request.urlretrieve(NATURAL_EARTH_URL, NATURAL_EARTH_PATH)
     return gpd.read_file(NATURAL_EARTH_PATH)
@@ -150,7 +152,9 @@ def load_boundary_from_geojson(
     return gpd.GeoDataFrame({"name": [name]}, geometry=[merged], crs="EPSG:4326")
 
 
-def get_country_boundary(country: str, mainland_only: bool = True, use_cache: bool = True) -> gpd.GeoDataFrame:
+def get_country_boundary(
+    country: str, mainland_only: bool = True, use_cache: bool = True
+) -> gpd.GeoDataFrame:
     key = cache_key("boundary_v3", country, mainland_only)
     if use_cache:
         cached = cache_get(key)
@@ -177,9 +181,7 @@ def get_country_boundary(country: str, mainland_only: bool = True, use_cache: bo
                     f"Mainland-only: dropped {before - after} outlying polygon(s); "
                     "pass --include-outlying to keep them"
                 )
-            boundary = gpd.GeoDataFrame(
-                {"name": [country]}, geometry=[filtered], crs=boundary.crs
-            )
+            boundary = gpd.GeoDataFrame({"name": [country]}, geometry=[filtered], crs=boundary.crs)
 
     cache_set(key, boundary)
     return boundary
@@ -198,10 +200,7 @@ def _simplify_boundary_for_overpass(
     max_coords: int = 2000,
 ) -> list[Polygon]:
     """Progressively simplify a boundary so the total coordinate count fits Overpass."""
-    if isinstance(geometry, Polygon):
-        polygons = [geometry]
-    else:
-        polygons = list(geometry.geoms)
+    polygons = [geometry] if isinstance(geometry, Polygon) else list(geometry.geoms)
 
     for tolerance in (0.005, 0.01, 0.02, 0.05, 0.1):
         total_coords = sum(len(p.exterior.coords) for p in polygons)
@@ -245,16 +244,15 @@ def fetch_power_features_single(
     if sea_buffer_km > 0:
         boundary_proj = boundary.to_crs(render_crs)
         buffered = unary_union(boundary_proj.geometry).buffer(sea_buffer_km * 1000)
-        boundary_geom = gpd.GeoDataFrame(
-            geometry=[buffered], crs=render_crs
-        ).to_crs("EPSG:4326").geometry.iloc[0]
+        boundary_geom = (
+            gpd.GeoDataFrame(geometry=[buffered], crs=render_crs)
+            .to_crs("EPSG:4326")
+            .geometry.iloc[0]
+        )
 
     polygons = _simplify_boundary_for_overpass(boundary_geom)
     total_coords = sum(len(p.exterior.coords) for p in polygons)
-    print(
-        f"Single Overpass query: {len(polygons)} polygon(s), "
-        f"{total_coords:,} coordinate pairs"
-    )
+    print(f"Single Overpass query: {len(polygons)} polygon(s), {total_coords:,} coordinate pairs")
 
     power_regex = "^(" + "|".join(values) + ")$"
     way_clauses = []
@@ -262,13 +260,7 @@ def fetch_power_features_single(
         ps = _polygon_to_overpass_poly(poly)
         way_clauses.append(f'  way["power"~"{power_regex}"](poly:"{ps}");')
 
-    query = (
-        f"[out:json][timeout:{timeout}];\n"
-        "(\n"
-        + "\n".join(way_clauses) + "\n"
-        ");\n"
-        "out geom;\n"
-    )
+    query = f"[out:json][timeout:{timeout}];\n(\n" + "\n".join(way_clauses) + "\n);\nout geom;\n"
 
     overpass_url = ox.settings.overpass_url.rstrip("/")
     if not overpass_url.endswith("/interpreter"):
@@ -296,13 +288,15 @@ def fetch_power_features_single(
             continue
         coords = [(pt["lon"], pt["lat"]) for pt in geom_coords]
         tags = elem.get("tags", {})
-        rows.append({
-            "power": tags.get("power"),
-            "voltage": tags.get("voltage"),
-            "name": tags.get("name"),
-            "operator": tags.get("operator"),
-            "geometry": LineString(coords),
-        })
+        rows.append(
+            {
+                "power": tags.get("power"),
+                "voltage": tags.get("voltage"),
+                "name": tags.get("name"),
+                "operator": tags.get("operator"),
+                "geometry": LineString(coords),
+            }
+        )
 
     if not rows:
         raise RuntimeError(
@@ -413,7 +407,9 @@ def _fetch_tiles(
                 cache_set(tile_cache_key(tile_geom), empty_tile)
                 rate_limit_delay = max(tile_delay, rate_limit_delay - 5)
                 return True
-            is_rate_limit = "111" in str(exc) or "rate" in str(exc).lower() or "too many" in str(exc).lower()
+            is_rate_limit = (
+                "111" in str(exc) or "rate" in str(exc).lower() or "too many" in str(exc).lower()
+            )
             if is_rate_limit:
                 rate_limit_delay = min(120, rate_limit_delay + 10)
             print(f"  Warning: tile {tile_number:,}/{total:,} failed: {exc}")
@@ -461,10 +457,7 @@ def _fetch_tiles(
     attempt = 1
     while pending:
         delay = min(300, max(rate_limit_delay, 10 * attempt))
-        print(
-            f"Retrying {len(pending):,} failed tile(s) in {delay}s "
-            f"(attempt {attempt + 1})..."
-        )
+        print(f"Retrying {len(pending):,} failed tile(s) in {delay}s (attempt {attempt + 1})...")
         time.sleep(delay)
         next_pending: list[tuple[int, Any]] = []
         for tile_number, tile_geom in pending:
@@ -486,7 +479,9 @@ def _fetch_tiles(
 
 def _combine_tile_frames(frames: list[gpd.GeoDataFrame], keep_cols: list[str]) -> gpd.GeoDataFrame:
     """Merge per-tile frames, drop cross-tile duplicates, and trim to ``keep_cols``."""
-    combined = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry="geometry", crs="EPSG:4326")
+    combined = gpd.GeoDataFrame(
+        pd.concat(frames, ignore_index=True), geometry="geometry", crs="EPSG:4326"
+    )
     id_cols = [col for col in _TILE_ID_COLS if col in combined.columns]
     if id_cols:
         combined = combined.drop_duplicates(subset=id_cols)

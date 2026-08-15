@@ -13,9 +13,9 @@ import numpy as np
 from matplotlib.font_manager import FontProperties
 from matplotlib.offsetbox import AnchoredOffsetbox, HPacker, TextArea
 
-from common import DEFAULT_VOLTAGE_TIERS, MM_PER_INCH, tqdm
-from prepare import PLANT_SOURCE_BUCKETS
-from theming import Theme, compute_line_styles, compute_plant_styles, derive_plant_colors
+from .common import DEFAULT_VOLTAGE_TIERS, MM_PER_INCH, tqdm
+from .prepare import PLANT_SOURCE_BUCKETS
+from .theming import Theme, compute_line_styles, compute_plant_styles, derive_plant_colors
 
 # Half (thin) space placed between a number and its unit, e.g. "380 kV".
 # Rendered via matplotlib mathtext, where "\," is a thin space.
@@ -223,13 +223,17 @@ def render_poster(
     ax.axis("off")
 
     if not hide_borders:
-        boundary.plot(ax=ax, facecolor="none", edgecolor=theme.boundary, linewidth=0.7, alpha=0.9, zorder=1)
+        boundary.plot(
+            ax=ax, facecolor="none", edgecolor=theme.boundary, linewidth=0.7, alpha=0.9, zorder=1
+        )
 
-    styled = lines.assign(**compute_line_styles(
-        lines,
-        theme,
-        voltage_tiers=voltage_tiers,
-    ))
+    styled = lines.assign(
+        **compute_line_styles(
+            lines,
+            theme,
+            voltage_tiers=voltage_tiers,
+        )
+    )
     grouped = styled.groupby(["_color", "_linewidth", "_alpha"], sort=False)
     group_iter = tqdm(
         grouped,
@@ -277,10 +281,16 @@ def render_poster(
             )
 
     ax.set_aspect("equal", adjustable="box")
-    set_country_extent(ax, boundary, width, height, padding=padding, shift_x=shift_x, shift_y=shift_y)
+    set_country_extent(
+        ax, boundary, width, height, padding=padding, shift_x=shift_x, shift_y=shift_y
+    )
 
-    add_gradient_fade(ax, theme.fade, "bottom", zorder=10, height=fade_bottom_height, max_alpha=fade_bottom_alpha)
-    add_gradient_fade(ax, theme.fade, "top", zorder=10, height=fade_top_height, max_alpha=fade_top_alpha)
+    add_gradient_fade(
+        ax, theme.fade, "bottom", zorder=10, height=fade_bottom_height, max_alpha=fade_bottom_alpha
+    )
+    add_gradient_fade(
+        ax, theme.fade, "top", zorder=10, height=fade_top_height, max_alpha=fade_top_alpha
+    )
 
     scale = min(width, height) / 12
     # Landscape posters have less vertical room, so the title at the same point
@@ -294,7 +304,9 @@ def render_poster(
     year = datetime.now().year
     low_kv, mid_kv, high_kv, extra_kv = voltage_tiers
     total_length_km = float(lines.geometry.length.sum()) / 1000.0
-    high_voltage_length_km = float(lines.loc[lines["voltage_kv"].fillna(0) >= mid_kv].geometry.length.sum()) / 1000.0
+    high_voltage_length_km = (
+        float(lines.loc[lines["voltage_kv"].fillna(0) >= mid_kv].geometry.length.sum()) / 1000.0
+    )
     if subtitle is None:
         subtitle = "ELECTRICAL GRID" if include_minor_lines else "ELECTRICAL TRANSMISSION GRID"
     metadata = f"{year} · {total_length_km:,.0f}{THIN_SPACE}km of power lines"
@@ -351,8 +363,11 @@ def render_poster(
         fontproperties=font_sub,
         zorder=TEXT_ZORDER,
     )
+
     def _seg(text: str, color: str, alpha: float) -> TextArea:
-        return TextArea(text, textprops=dict(fontproperties=font_meta, color=color, alpha=alpha))
+        return TextArea(
+            text, textprops={"fontproperties": font_meta, "color": color, "alpha": alpha}
+        )
 
     def _add_metadata_row(children: list[TextArea], y: float) -> None:
         packed = HPacker(children=children, align="center", sep=4.0 * scale, pad=0)

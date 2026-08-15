@@ -11,7 +11,7 @@ import pandas as pd
 import shapely
 from shapely.ops import unary_union
 
-from common import tqdm
+from .common import tqdm
 
 
 def parse_voltage_to_kv(value: Any) -> float | None:
@@ -44,12 +44,9 @@ def parse_voltage_to_kv(value: Any) -> float | None:
         if not match:
             continue
 
+        # OSM voltage is usually in volts, e.g. 380000; convert those to kV.
         number = float(match.group(0))
-        if multiplier == 1.0 and number > 1200:
-            # OSM voltage is usually in volts, e.g. 380000; convert to kV.
-            number = number / 1000.0
-        else:
-            number = number * multiplier
+        number = number / 1000.0 if multiplier == 1.0 and number > 1200 else number * multiplier
         values.append(number)
 
     return max(values) if values else None
@@ -219,9 +216,7 @@ def prepare_lines(
             parts.append(_safe_clip(land_lines, land_mask))
         cable_lines = lines_projected[is_cable]
         if not cable_lines.empty:
-            cable_mask = unary_union(
-                boundary_projected.geometry.buffer(cable_sea_buffer_km * 1000)
-            )
+            cable_mask = unary_union(boundary_projected.geometry.buffer(cable_sea_buffer_km * 1000))
             parts.append(_safe_clip(cable_lines, cable_mask))
         bar.update()
 
@@ -273,9 +268,13 @@ def prepare_plants(
     inside = shapely.contains(mask_geom, plants_projected.geometry.values)
     plants_projected = plants_projected[inside]
 
-    capacity_raw = plants_projected.get("plant:output:electricity", pd.Series(index=plants_projected.index, dtype=object))
+    capacity_raw = plants_projected.get(
+        "plant:output:electricity", pd.Series(index=plants_projected.index, dtype=object)
+    )
     plants_projected["capacity_mw"] = capacity_raw.apply(parse_capacity_to_mw)
-    source_raw = plants_projected.get("plant:source", pd.Series(index=plants_projected.index, dtype=object))
+    source_raw = plants_projected.get(
+        "plant:source", pd.Series(index=plants_projected.index, dtype=object)
+    )
     plants_projected["source_bucket"] = source_raw.apply(bucket_plant_source)
 
     if min_capacity_mw > 0:
