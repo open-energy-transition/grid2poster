@@ -10,8 +10,10 @@ import geopandas as gpd
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.font_manager import FontProperties
 from matplotlib.offsetbox import AnchoredOffsetbox, HPacker, TextArea
+from pyproj import Geod
 
 from common import DEFAULT_VOLTAGE_TIERS, MM_PER_INCH, tqdm
 from prepare import PLANT_SOURCE_BUCKETS
@@ -25,6 +27,29 @@ THIN_SPACE = r"$\,$"
 # the data lines (zorder ~2–8) and the gradient fades (10) so the text always
 # renders on top of the grid.
 TEXT_ZORDER = 100
+
+# Ellipsoid used for the poster's length figures. See _segment_lengths_km.
+_GEOD = Geod(ellps="WGS84")
+
+
+def _segment_lengths_km(lines: gpd.GeoDataFrame) -> pd.Series:
+    """Length of every line segment in kilometres, measured on the ellipsoid.
+
+    ``lines`` arrives projected for rendering, and measuring in that space
+    reports projected units rather than ground distance. The default
+    EPSG:3857 stretches distance by 1/cos(latitude) - 1.59x at Germany's
+    latitude, and worse further from the equator - so a poster's "km of power
+    lines" came out about 59% too high there. Measuring geodetically is
+    correct at any latitude, and unlike an equidistant projection it also
+    holds for the continent-wide and Global posters, where no single
+    projected CRS is accurate throughout.
+    """
+    lonlat = lines.geometry.to_crs("EPSG:4326")
+    return pd.Series(
+        [_GEOD.geometry_length(geom) / 1000.0 for geom in lonlat],
+        index=lines.index,
+        dtype="float64",
+    )
 
 
 def set_country_extent(
@@ -293,8 +318,9 @@ def render_poster(
 
     year = datetime.now().year
     low_kv, mid_kv, high_kv, extra_kv = voltage_tiers
-    total_length_km = float(lines.geometry.length.sum()) / 1000.0
-    high_voltage_length_km = float(lines.loc[lines["voltage_kv"].fillna(0) >= mid_kv].geometry.length.sum()) / 1000.0
+    seg_km = _segment_lengths_km(lines)
+    total_length_km = float(seg_km.sum())
+    high_voltage_length_km = float(seg_km[lines["voltage_kv"].fillna(0) >= mid_kv].sum())
     if subtitle is None:
         subtitle = "ELECTRICAL GRID" if include_minor_lines else "ELECTRICAL TRANSMISSION GRID"
     metadata = f"{year} · {total_length_km:,.0f}{THIN_SPACE}km of power lines"
@@ -303,7 +329,14 @@ def render_poster(
 
     breakdown_rows: list[tuple[str, str, float]] = []
     kv = lines["voltage_kv"].astype("float64")
-    seg_km = lines.geometry.length / 1000.0
+    # Lines below the lowest tier, or whose voltage tag could not be parsed,
+    # are drawn in line_unknown. They were previously left out of the
+    # breakdown entirely, so the rows did not add up to the mapped network.
+    unknown_km = float(seg_km[kv.isna() | (kv < low_kv)].sum())
+    if unknown_km > 0:
+        breakdown_rows.append(
+            (f"<{low_kv:g}{THIN_SPACE}kV/n.a.", theme.line_unknown, unknown_km)
+        )
     tiers = [
         (low_kv, mid_kv, theme.line_low, f"{low_kv:g}–{mid_kv:g}{THIN_SPACE}kV"),
         (mid_kv, high_kv, theme.line_mid, f"{mid_kv:g}–{high_kv:g}{THIN_SPACE}kV"),
